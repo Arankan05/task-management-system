@@ -153,10 +153,136 @@ const deleteTask = async (req, res) => {
   }
 };
 
+const assignTask = async (req, res) => {
+  try {
+    const {id} = req.params;
+    const {userId} = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "userId is required",
+      });
+    }
+
+    const existingTask = await taskService.getTaskById(id);
+    if (!existingTask) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found",
+      });
+    }
+
+     const userExists = await taskService.getUserById(userId);
+    if (!userExists) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const task = await taskService.assignTask(id, userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Task assigned successfully",
+      data: task,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message:"Failed to assign task",
+      error: error.message,
+    });
+  }
+};
+
+const unassignTask = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const existingTask = await taskService.getTaskById(id);
+    if (!existingTask) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found",
+      });
+    }
+
+    const task = await taskService.unassignTask(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Task unassigned successfully",
+      data: task,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to unassign task",
+      error: error.message,
+    });
+  }
+};
+
+const getTasksByAssignee = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const userExists = await taskService.getUserById(userId);
+    if (!userExists) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const tasks = await taskService.getTasksByAssignee(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Tasks retrieved successfully",
+      count: tasks.length,
+      data: tasks,
+      });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve tasks",
+      error: error.message,
+    });
+  }
+};
+
+const getMyTasks = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const tasks = await taskService.getMyTasks(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Your tasks retrieved successfully",
+      count: tasks.length,
+      data: tasks,
+    });
+  } catch (error) {
+     return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve your tasks",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createTask,
   getAllTasks,
   getTaskById,
   updateTask,
   deleteTask,
+  assignTask,
+  unassignTask,
+  getTasksByAssignee,
+  getMyTasks,
 };
