@@ -67,10 +67,66 @@ const deleteTask = async (id) => {
   });
 };
 
+const assignTask = async (taskId, userId) => {
+  return await prisma.task.update({
+    where: {id: taskId},
+    data: {assignedToId: userId},
+    include: {
+      createdBy: {select: {id:true, name:true, email:true}},
+      assignedTo: {select: {id:true, name:true, email:true}},
+    },
+  });
+};
+
+const unassignTask = async (taskId) => {
+  return await prisma.task.update({
+    where: {id:taskId},
+    data: {assignedToId: null},
+    include: {
+       createdBy: {select: {id:true, name:true, email:true}},
+      assignedTo: {select: {id:true, name:true, email:true}},
+    },
+  });
+};
+
+const getTasksByAssignee = async (userId) => {
+  return await prisma.task.findMany({
+    where: { assignedToId: userId },
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+      assignedTo: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+};
+
+const getMyTasks = async (userId) => {
+  return await prisma.task.findMany({
+    where: { assignedToId: userId },
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+      assignedTo: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+};
+
+const getUserById = async (userId) => {
+  return await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, email: true },
+  });
+};
+
 module.exports = {
   createTask,
   getAllTasks,
   getTaskById,
   updateTask,
   deleteTask,
+  assignTask,
+  unassignTask,
+  getTasksByAssignee,
+  getMyTasks,
+  getUserById,
 };
