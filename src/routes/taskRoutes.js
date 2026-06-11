@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const taskController = require("../controllers/taskController");
 const authenticate = require("../middleware/authMiddleware");
-const { task } = require("../config/db");
+const { validateCreateTask, validateUpdateTask } = require("../middleware/taskValidation");
 
 router.post("/", authenticate, taskController.createTask);
 
