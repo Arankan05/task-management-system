@@ -275,6 +275,73 @@ const getMyTasks = async (req, res) => {
   }
 };
 
+const updateTaskStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ["TODO", "IN_PROGRESS", "COMPLETED"];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Must be TODO, IN_PROGRESS, or COMPLETED",
+      });
+    }
+
+    const existingTask = await taskService.getTaskById(id);
+    if (!existingTask) {
+      return res.status(404).json({ success: false, message: "Task not found" });
+    }
+
+    const task = await taskService.updateTaskStatus(id, status);
+    return res.status(200).json({ success: true, message: "Task status updated successfully", data: task });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to update task status", error: error.message });
+  }
+};
+
+const updateTaskPriority = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { priority } = req.body;
+
+    const validPriorities = ["LOW", "MEDIUM", "HIGH"];
+    if (!priority || !validPriorities.includes(priority)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid priority. Must be LOW, MEDIUM, or HIGH",
+      });
+    }
+
+    const existingTask = await taskService.getTaskById(id);
+    if (!existingTask) {
+      return res.status(404).json({ success: false, message: "Task not found" });
+    }
+
+    const task = await taskService.updateTaskPriority(id, priority);
+    return res.status(200).json({ success: true, message: "Task priority updated successfully", data: task });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to update task priority", error: error.message });
+  }
+};
+
+const getTasksByFilter = async (req, res) => {
+  try {
+    const { status, priority, assignedToId, createdById } = req.query;
+
+    const filters = {};
+    if (status) filters.status = status;
+    if (priority) filters.priority = priority;
+    if (assignedToId) filters.assignedToId = assignedToId;
+    if (createdById) filters.createdById = createdById;
+
+    const tasks = await taskService.getTasksByFilter(filters);
+    return res.status(200).json({ success: true, message: "Tasks retrieved successfully", count: tasks.length, data: tasks });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to retrieve tasks", error: error.message });
+  }
+};
+
 module.exports = {
   createTask,
   getAllTasks,
@@ -285,4 +352,7 @@ module.exports = {
   unassignTask,
   getTasksByAssignee,
   getMyTasks,
+  updateTaskStatus,
+  updateTaskPriority,
+  getTasksByFilter,
 };
