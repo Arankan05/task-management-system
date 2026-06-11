@@ -118,6 +118,39 @@ const getUserById = async (userId) => {
   });
 };
 
+const updateTaskStatus = async(id, status) => {
+  return await prisma.task.update({
+    where: {id},
+    data: {status},
+    include: {
+      createdBy: {select: {id:true, name:true, email:true}},
+      assignedTo: {select: {id:true, name:true, email:true}},
+    },
+  });
+};
+
+const updateTaskPriority = async (id, priority) => {
+  return await prisma.task.update ({
+    where: {id},
+    data: {priority},
+    include: {
+      createdBy: {select: {id:true, name:true, email:true}},
+      assignedTo: {select: {id:true, name:true, email:true}},
+    },
+  });
+}
+
+const getTasksByFilter = async (filters) => {
+  return await prisma.task.findMany({
+    where: filters,
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+      assignedTo: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+};
+
 module.exports = {
   createTask,
   getAllTasks,
@@ -129,4 +162,7 @@ module.exports = {
   getTasksByAssignee,
   getMyTasks,
   getUserById,
+  updateTaskStatus,
+  updateTaskPriority,
+  getTasksByFilter,
 };
