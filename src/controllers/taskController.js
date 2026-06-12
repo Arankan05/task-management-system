@@ -22,6 +22,10 @@ const createTask = async (req, res) => {
       createdById: req.user.id,
     });
 
+    //Emit real-rtime event
+    const io = req.app.get("io");
+    io.emit("task:created", {task});
+
     return res.status(201).json({
       success: true,
       message: "Task created successfully",
@@ -112,6 +116,10 @@ const updateTask = async (req, res) => {
       assignedToId,
     });
 
+    //Emit real-time event
+    const io = req.app.get ("io");
+    io.emit("task:updated", {task: updateTask});
+
     return res.status(200).json({
       success: true,
       message: "Task updated successfully",
@@ -139,6 +147,10 @@ const deleteTask = async (req, res) => {
     }
 
     await taskService.deleteTask(id);
+
+    //Emit real-time event
+    const io = req.app.get("io");
+    io.emit ("task:deleted", {taskId: id});
 
     return res.status(200).json({
       success: true,
@@ -182,6 +194,10 @@ const assignTask = async (req, res) => {
     }
 
     const task = await taskService.assignTask(id, userId);
+
+    //Emit real-time event to assigned user's room
+    const io = req.app.get("io");
+    io.to('user:${userId}').emit("task:assigned", {task});
 
     return res.status(200).json({
       success: true,
