@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const http = require("http");
+const { Server } = require("socket.io");
 
 require("dotenv").config();
 
@@ -10,8 +12,23 @@ const taskRoutes = require("./routes/taskRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
+const initsocketHandler = require("./socket/socketHandler");
 
 const app = express();
+const server = http.createServer(app);
+
+const io = new Server(server, {
+    cors: {
+        origin: process.env.CLIENT_URL || "http://localhost:3000",
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+        credentials: true,
+    },
+});
+
+initsocketHandler(io);
+
+//make io accessible in controllers
+app.set("io", io);
 
 //CORS configuration
 app.use(cors({
