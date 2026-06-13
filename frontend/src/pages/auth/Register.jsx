@@ -1,13 +1,17 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import api from '../../services/api'
 
 function Register() {
+  const navigate = useNavigate()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault()
     setError('')
 
@@ -30,9 +34,19 @@ function Register() {
     if (password !== confirmPassword) {
       setError('Passwords do not match')
       return
-    }
-
+    }//navigate part- kv
     console.log('Register submitted', { name, email, password })
+    setLoading(true)
+    try {
+      const { data } = await api.post('/auth/register', { name, email, password })
+      if (data.success) {
+        navigate('/login')
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Registration failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -91,8 +105,12 @@ function Register() {
             />
           </div>
 
-          <button type="submit" className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600">
-            Register
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 disabled:opacity-50"
+          >
+            {loading ? 'Registering...' : 'Register'}
           </button>
         </form>
 
