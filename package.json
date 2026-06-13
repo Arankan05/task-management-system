@@ -5,8 +5,7 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon src/app.js"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +26,7 @@
     "mysql2": "^3.22.4",
     "prisma": "^7.8.0",
     "react-router-dom": "^7.16.0",
+    "socket.io": "^4.8.3",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1",
     "validator": "^13.15.35"
