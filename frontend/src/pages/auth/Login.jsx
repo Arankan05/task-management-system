@@ -1,11 +1,17 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import api from '../../services/api'
 
 function Login() {
+  const navigate = useNavigate()
+  const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
     setError('')
 
@@ -21,8 +27,20 @@ function Login() {
       setError('Password must be at least 6 characters')
       return
     }
-
     console.log('Login submitted', { email, password })
+    setLoading(true)
+    try {
+      const { data } = await api.post('/auth/login', { email, password })
+      if (data.success) {
+        const { token, user } = data.data
+        login(user, token)
+        navigate('/dashboard')
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Login failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -59,8 +77,12 @@ function Login() {
             />
           </div>
 
-          <button type="submit" className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600">
-            Login
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 disabled:opacity-50"
+          >
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
