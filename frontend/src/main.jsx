@@ -1,13 +1,27 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
+import { Provider } from 'react-redux'
+import { PersistGate } from 'redux-persist/integration/react'
+import { store, persistor } from './store'
+import { setupSocket } from './services/socket'
+import ErrorBoundary from './components/ErrorBoundary'
+import BootScreen from './components/BootScreen'
+import AppInitializer from './components/AppInitializer'
 import App from './App.jsx'
-import { AuthProvider } from './context/AuthContext.jsx'
+import './index.css'
+
+setupSocket(store)
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <ErrorBoundary>
+      <Provider store={store}>
+        <PersistGate loading={<BootScreen />} persistor={persistor}>
+          <AppInitializer>
+            <App />
+          </AppInitializer>
+        </PersistGate>
+      </Provider>
+    </ErrorBoundary>
   </StrictMode>,
 )
