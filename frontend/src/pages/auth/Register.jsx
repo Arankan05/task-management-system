@@ -1,47 +1,38 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import api from '../../services/api'
+import Alert from '../../components/ui/Alert'
+import { UserPlus, Mail, Lock, User } from 'lucide-react'
 
 function Register() {
   const navigate = useNavigate()
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const handleChange = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }))
+    setError('')
+  }
 
   const handleRegister = async (e) => {
     e.preventDefault()
     setError('')
 
-    if (!name) {
-      setError('Name is required')
-      return
-    }
-    if (!email) {
-      setError('Email is required')
-      return
-    }
-    if (!password) {
-      setError('Password is required')
-      return
-    }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }//navigate part- kv
-    console.log('Register submitted', { name, email, password })
+    if (!form.name.trim()) return setError('Name is required')
+    if (!form.email) return setError('Email is required')
+    if (!form.password) return setError('Password is required')
+    if (form.password.length < 6) return setError('Password must be at least 6 characters')
+    if (form.password !== form.confirmPassword) return setError('Passwords do not match')
+
     setLoading(true)
     try {
-      const { data } = await api.post('/auth/register', { name, email, password })
-      if (data.success) {
-        navigate('/login')
-      }
+      const { data } = await api.post('/auth/register', {
+        name: form.name.trim(),
+        email: form.email,
+        password: form.password,
+      })
+      if (data.success) navigate('/login')
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed')
     } finally {
@@ -50,73 +41,74 @@ function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">Register</h2>
-
-        {error && (
-          <div className="bg-red-100 text-red-700 border border-red-400 px-4 py-3 rounded-lg mb-4">
-            {error}
+    <div className="min-h-screen flex">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 p-12 flex-col justify-between relative overflow-hidden">
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <span className="text-white font-bold">TF</span>
+            </div>
+            <span className="text-white text-xl font-bold">TaskFlow</span>
           </div>
-        )}
+          <h1 className="text-4xl font-bold text-white leading-tight mb-4">
+            Start organizing<br />your work today.
+          </h1>
+          <p className="text-brand-100 text-lg max-w-md">
+            Join TaskFlow and take control of your projects with powerful task management tools.
+          </p>
+        </div>
+        <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-white/5" />
+      </div>
 
-        <form onSubmit={handleRegister}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Name</label>
-            <input
-              type="text"
-              placeholder="Enter your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            />
+      <div className="flex-1 flex items-center justify-center p-6 bg-surface-muted">
+        <div className="w-full max-w-md animate-slide-up">
+          <div className="glass-card p-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-1">Create account</h2>
+            <p className="text-slate-500 text-sm mb-6">Get started with TaskFlow</p>
+
+            {error && <div className="mb-4"><Alert message={error} type="error" onClose={() => setError('')} /></div>}
+
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input type="text" placeholder="John Doe" value={form.name} onChange={(e) => handleChange('name', e.target.value)} className="input-field pl-9" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input type="email" placeholder="you@company.com" value={form.email} onChange={(e) => handleChange('email', e.target.value)} className="input-field pl-9" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input type="password" placeholder="••••••••" value={form.password} onChange={(e) => handleChange('password', e.target.value)} className="input-field pl-9" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input type="password" placeholder="••••••••" value={form.confirmPassword} onChange={(e) => handleChange('confirmPassword', e.target.value)} className="input-field pl-9" />
+                </div>
+              </div>
+              <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
+                <UserPlus size={16} />
+                {loading ? 'Creating account...' : 'Create Account'}
+              </button>
+            </form>
+
+            <p className="text-center text-slate-500 text-sm mt-6">
+              Already have an account?{' '}
+              <Link to="/login" className="text-brand-600 font-semibold hover:text-brand-700">Sign in</Link>
+            </p>
           </div>
-
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Email</label>
-            <input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Password</label>
-            <input
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Confirm Password</label>
-            <input
-              type="password"
-              placeholder="Confirm your password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 disabled:opacity-50"
-          >
-            {loading ? 'Registering...' : 'Register'}
-          </button>
-        </form>
-
-        <p className="text-center text-gray-600 text-sm mt-4">
-          Already have an account? <a href="/login" className="text-blue-500 hover:underline">Login</a>
-        </p>
+        </div>
       </div>
     </div>
   )
