@@ -1,53 +1,70 @@
+import { useSelector } from 'react-redux'
+import { Mail, Shield, Calendar } from 'lucide-react'
 import Layout from '../components/Layout'
 
 function Profile() {
+  const { user } = useSelector((state) => state.auth)
+
+  const initials = user?.name
+    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'U'
+
   return (
     <Layout>
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Profile</h1>
+      <div className="page-container max-w-2xl">
+        <div className="mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Profile</h1>
+          <p className="text-slate-500 mt-1">Your account information</p>
+        </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md max-w-lg">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-              U
+        <div className="glass-card overflow-hidden">
+          <div className="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-8">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-white text-xl font-bold">
+                {initials}
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">{user?.name || 'User'}</h2>
+                <p className="text-brand-100 text-sm">{user?.email || '—'}</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">User Name</h2>
-              <p className="text-gray-500">user@example.com</p>
+          </div>
+
+          <div className="p-6 space-y-5">
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50">
+              <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center">
+                <Mail size={18} className="text-brand-600" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-medium">Email Address</p>
+                <p className="text-sm font-semibold text-slate-800">{user?.email || '—'}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50">
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <Shield size={18} className="text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-medium">Role</p>
+                <p className="text-sm font-semibold text-slate-800">{user?.role || 'COLLABORATOR'}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50">
+              <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
+                <Calendar size={18} className="text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-medium">Member Since</p>
+                <p className="text-sm font-semibold text-slate-800">
+                  {user?.createdAt
+                    ? new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+                    : '—'}
+                </p>
+              </div>
             </div>
           </div>
-
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Name</label>
-            <input
-              type="text"
-              placeholder="Your name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Email</label>
-            <input
-              type="email"
-              placeholder="Your email"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Role</label>
-            <input
-              type="text"
-              placeholder="Your role"
-              disabled
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
-            />
-          </div>
-
-          <button className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600">
-            Update Profile
-          </button>
         </div>
       </div>
     </Layout>
