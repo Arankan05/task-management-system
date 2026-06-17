@@ -3,6 +3,19 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { successResponse, errorResponse } = require("../utils/response");
 
+const USER_SELECT = {
+    id: true,
+    name: true,
+    email: true,
+    role: true,
+    profilePhoto: true,
+    contactNumber: true,
+    address: true,
+    dateOfBirth: true,
+    gender: true,
+    createdAt: true,
+};
+
 const registerUser = async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -23,6 +36,7 @@ const registerUser = async (req, res) => {
                 email,
                 password: hashedPassword,
             },
+            select: USER_SELECT,
         });
 
         return successResponse(
@@ -66,14 +80,66 @@ const loginUser = async (req, res) => {
             }
         );
 
+        const { password: _, ...safeUser } = user;
+
         return successResponse(
             res,
             "Login successful",
             {
                 token,
-                user,
+                user: safeUser,
             }
         );
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+const getProfile = async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: USER_SELECT,
+        });
+
+        if (!user) {
+            return errorResponse(res, "User not found", 404);
+        }
+
+        return successResponse(res, "Profile fetched", user);
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+const updateProfile = async (req, res) => {
+    try {
+        const { name, profilePhoto, contactNumber, address, dateOfBirth, gender } = req.body;
+
+        if (!name || !name.trim()) {
+            return errorResponse(res, "Full name is required", 400);
+        }
+
+        if (profilePhoto && typeof profilePhoto === "string" && profilePhoto.length > 2_000_000) {
+            return errorResponse(res, "Profile photo is too large", 400);
+        }
+
+        const user = await prisma.user.update({
+            where: { id: req.user.id },
+            data: {
+                name: name.trim(),
+                profilePhoto: profilePhoto ?? null,
+                contactNumber: contactNumber?.trim() || null,
+                address: address?.trim() || null,
+                dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+                gender: gender?.trim() || null,
+            },
+            select: USER_SELECT,
+        });
+
+        return successResponse(res, "Profile updated successfully", user);
     } catch (error) {
         console.error(error);
         return errorResponse(res, "Server Error", 500);
@@ -83,4 +149,6 @@ const loginUser = async (req, res) => {
 module.exports = {
     registerUser,
     loginUser,
+    getProfile,
+    updateProfile,
 };
