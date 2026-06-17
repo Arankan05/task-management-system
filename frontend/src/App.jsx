@@ -7,6 +7,7 @@ import Tasks from './pages/Tasks'
 import TaskDetail from './pages/TaskDetail'
 import Kanban from './pages/Kanban'
 import Profile from './pages/Profile'
+import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -29,6 +30,7 @@ function App() {
         <Route path="/tasks/:id" element={<ProtectedRoute><TaskDetail /></ProtectedRoute>} />
         <Route path="/kanban" element={<ProtectedRoute><Kanban /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

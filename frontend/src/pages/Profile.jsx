@@ -1,5 +1,6 @@
 import { useSelector } from 'react-redux'
-import { Mail, Shield, Calendar } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Mail, Shield, Calendar, Settings } from 'lucide-react'
 import Layout from '../components/Layout'
 
 function Profile() {
@@ -13,8 +14,8 @@ function Profile() {
     <Layout>
       <div className="page-container max-w-2xl">
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Profile</h1>
-          <p className="text-slate-500 mt-1">Your account information</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-theme">Profile</h1>
+          <p className="text-theme-muted mt-1">Your account information</p>
         </div>
 
         <div className="glass-card overflow-hidden">
@@ -64,6 +65,24 @@ function Profile() {
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="px-6 pb-6">
+            <Link
+              to="/settings"
+              className="flex items-center justify-between w-full p-4 rounded-xl border border-theme bg-theme-surface hover:border-primary transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Settings size={18} className="text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-theme">Settings</p>
+                  <p className="text-xs text-theme-muted">Appearance, notifications, security</p>
+                </div>
+              </div>
+              <span className="text-primary text-sm font-medium group-hover:underline">Open →</span>
+            </Link>
           </div>
         </div>
       </div>
