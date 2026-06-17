@@ -9,7 +9,6 @@ function Navbar({ onMenuClick }) {
   return (
     <header className="sticky top-0 z-30 bg-theme-surface/80 backdrop-blur-md border-b border-theme px-4 lg:px-6 h-16 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <ProfileAvatar user={user} size="md" />
         <SidebarToggle onClick={onMenuClick} />
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
@@ -19,10 +18,11 @@ function Navbar({ onMenuClick }) {
         </div>
       </div>
 
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
         <button className="p-2 rounded-lg text-theme-muted hover:text-theme hover:bg-theme-surface transition-colors" aria-label="Notifications">
           <Bell size={20} />
         </button>
+        <ProfileAvatar user={user} size="md" />
       </div>
     </header>
   )
