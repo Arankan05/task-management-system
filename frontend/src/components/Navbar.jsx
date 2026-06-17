@@ -21,14 +21,14 @@ function Navbar({ onMenuClick }) {
     : 'U'
 
   return (
-    <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-surface-border px-4 lg:px-6 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-30 bg-theme-surface/80 backdrop-blur-md border-b border-theme px-4 lg:px-6 h-16 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <SidebarToggle onClick={onMenuClick} />
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
             <span className="text-white text-xs font-bold">TF</span>
           </div>
-          <span className="text-lg font-bold text-slate-900 hidden sm:block">TaskFlow</span>
+          <span className="text-lg font-bold text-theme hidden sm:block">TaskFlow</span>
         </div>
       </div>
 
