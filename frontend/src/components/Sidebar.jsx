@@ -14,7 +14,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/tasks', label: 'Tasks', icon: ListTodo },
   { to: '/kanban', label: 'Kanban', icon: Columns3 },
-  { to: '/profile', label: 'Profile', icon: UserCircle },
+  { to: '/profile', label: 'My Profile', icon: UserCircle },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
 
