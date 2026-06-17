@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   ListTodo,
   Columns3,
-  UserCircle,
   Settings as SettingsIcon,
   Menu,
   X,
@@ -14,7 +13,6 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/tasks', label: 'Tasks', icon: ListTodo },
   { to: '/kanban', label: 'Kanban', icon: Columns3 },
-  { to: '/profile', label: 'My Profile', icon: UserCircle },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
 
