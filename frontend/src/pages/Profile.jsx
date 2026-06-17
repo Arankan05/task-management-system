@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   User,
   Mail,
@@ -9,14 +9,15 @@ import {
   Calendar,
   Camera,
   Save,
-  Settings,
   Shield,
+  LogOut,
 } from 'lucide-react'
 import Layout from '../components/Layout'
 import ProfileAvatar from '../components/ProfileAvatar'
 import Alert from '../components/ui/Alert'
 import Loader from '../components/ui/Loader'
-import { fetchProfile, updateProfile } from '../store/slices/authSlice'
+import { fetchProfile, updateProfile, logout } from '../store/slices/authSlice'
+import { disconnectSocket } from '../services/socket'
 
 const GENDER_OPTIONS = [
   { value: '', label: 'Select gender (optional)' },
@@ -30,6 +31,7 @@ const MAX_PHOTO_SIZE = 2 * 1024 * 1024
 
 function Profile() {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const { user, loading, error } = useSelector((state) => state.auth)
   const fileInputRef = useRef(null)
 
@@ -134,6 +136,12 @@ function Profile() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleLogout = () => {
+    disconnectSocket()
+    dispatch(logout())
+    navigate('/login')
   }
 
   if (initialLoading) {
@@ -335,10 +343,14 @@ function Profile() {
                 <Save size={16} />
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
-              <Link to="/settings" className="btn-secondary flex-1 sm:flex-none justify-center">
-                <Settings size={16} />
-                Settings
-              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="btn-secondary flex-1 sm:flex-none justify-center text-red-600 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-950/30"
+              >
+                <LogOut size={16} />
+                Logout
+              </button>
             </div>
           </section>
         </form>
