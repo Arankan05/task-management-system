@@ -5,6 +5,7 @@ import {
   ListTodo,
   Columns3,
   UserCircle,
+  Settings as SettingsIcon,
   Menu,
   X,
 } from 'lucide-react'
@@ -14,6 +15,7 @@ const navItems = [
   { to: '/tasks', label: 'Tasks', icon: ListTodo },
   { to: '/kanban', label: 'Kanban', icon: Columns3 },
   { to: '/profile', label: 'Profile', icon: UserCircle },
+  { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
 
 function Sidebar({ mobileOpen, onClose }) {
