@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { loginUser, clearAuthError } from '../../store/slices/authSlice'
 import Alert from '../../components/ui/Alert'
+import Footer from '../../components/Footer'
 import { LogIn, Mail, Lock } from 'lucide-react'
 
 function Login() {
@@ -33,7 +34,8 @@ function Login() {
   const displayError = validationError || error
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex flex-1">
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 p-12 flex-col justify-between relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-8">
@@ -96,6 +98,8 @@ function Login() {
           </div>
         </div>
       </div>
+      </div>
+      <Footer />
     </div>
   )
 }
