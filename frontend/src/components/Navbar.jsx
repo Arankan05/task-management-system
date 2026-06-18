@@ -12,9 +12,9 @@ function Navbar({ onMenuClick }) {
         <SidebarToggle onClick={onMenuClick} />
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-            <span className="text-white text-xs font-bold">TF</span>
+            <span className="text-white text-xs font-bold">TP</span>
           </div>
-          <span className="text-lg font-bold text-theme hidden sm:block">TaskFlow</span>
+          <span className="text-lg font-bold text-theme hidden sm:block">TASKPULSE</span>
         </div>
       </div>
 
