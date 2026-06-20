@@ -7,16 +7,17 @@ import PageHeader from '../components/ui/PageHeader'
 import EmptyState from '../components/ui/EmptyState'
 import TaskCard from '../components/tasks/TaskCard'
 import TaskFormModal from '../components/tasks/TaskFormModal'
-import { APP_NAME } from '../components/BrandLogo'
 import Loader from '../components/ui/Loader'
 import Alert from '../components/ui/Alert'
-import Modal from '../components/ui/Modal'
 import { fetchTasks, setActiveProjectId } from '../store/slices/tasksSlice'
 import { setActiveWorkspace } from '../store/slices/workspacesSlice'
-import { getWorkspace, getWorkspaceMembers, getWorkspaceStats, addWorkspaceMember, updateMemberRole, removeWorkspaceMember } from '../services/workspaceService'
+import { getWorkspace, getWorkspaceMembers, getWorkspaceStats, updateMemberRole, removeWorkspaceMember } from '../services/workspaceService'
+import { getWorkspaceInvitations, resendInvitation, cancelInvitation } from '../services/invitationService'
 import { getSocket } from '../services/socket'
 import WorkspaceTabs from '../components/workspace/WorkspaceTabs'
 import WorkspaceAnalyzeTab from '../components/workspace/WorkspaceAnalyzeTab'
+import InviteMemberModal from '../components/workspace/InviteMemberModal'
+import PendingInvitationsList from '../components/workspace/PendingInvitationsList'
 import {
   TASK_STATUSES, TASK_PRIORITIES, STATUS_LABELS, PRIORITY_LABELS,
   WORKSPACE_ROLES, WORKSPACE_ROLE_LABELS,
@@ -37,12 +38,12 @@ function WorkspaceDetail() {
   const [loadingWs, setLoadingWs] = useState(true)
   const [taskModal, setTaskModal] = useState(false)
   const [memberModal, setMemberModal] = useState(false)
+  const [invitations, setInvitations] = useState([])
+  const [invitationActionId, setInvitationActionId] = useState(null)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [priority, setPriority] = useState('')
   const [sort, setSort] = useState('recent')
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState(WORKSPACE_ROLES.COLLABORATOR)
   const [localError, setLocalError] = useState('')
   const [localSuccess, setLocalSuccess] = useState('')
   const [stats, setStats] = useState(null)
@@ -51,6 +52,16 @@ function WorkspaceDetail() {
   const myMembership = members.find((m) => m.userId === user?.id)
   const myRole = myMembership?.role === 'OWNER' ? WORKSPACE_ROLES.ADMINISTRATOR : myMembership?.role
   const canManageTeam = myRole === WORKSPACE_ROLES.ADMINISTRATOR
+
+  const loadInvitations = async () => {
+    if (!canManageTeam) return
+    try {
+      const list = await getWorkspaceInvitations(workspaceId)
+      setInvitations(list)
+    } catch {
+      setLocalError('Failed to load invitations')
+    }
+  }
 
   const loadWorkspace = async () => {
     setLoadingWs(true)
@@ -95,17 +106,43 @@ function WorkspaceDetail() {
     }
   }, [tab, workspaceId])
 
-  const handleInvite = async (e) => {
-    e.preventDefault()
+  useEffect(() => {
+    if (tab === 'team' && canManageTeam) {
+      loadInvitations()
+    }
+  }, [tab, workspaceId, canManageTeam])
+
+  const handleInvitationSent = () => {
+    setLocalSuccess('Invitation sent successfully')
+    loadInvitations()
+  }
+
+  const handleResendInvitation = async (invitationId) => {
+    setInvitationActionId(invitationId)
     setLocalError('')
     try {
-      await addWorkspaceMember(workspaceId, inviteEmail.trim(), inviteRole)
-      setInviteEmail('')
-      setMemberModal(false)
-      setLocalSuccess('Member added successfully')
-      loadWorkspace()
+      await resendInvitation(invitationId)
+      setLocalSuccess('Invitation resent')
+      loadInvitations()
     } catch (err) {
-      setLocalError(err.response?.data?.message || 'Failed to add member')
+      setLocalError(err.response?.data?.message || 'Failed to resend invitation')
+    } finally {
+      setInvitationActionId(null)
+    }
+  }
+
+  const handleCancelInvitation = async (invitationId) => {
+    if (!window.confirm('Cancel this invitation?')) return
+    setInvitationActionId(invitationId)
+    setLocalError('')
+    try {
+      await cancelInvitation(invitationId)
+      setLocalSuccess('Invitation cancelled')
+      loadInvitations()
+    } catch (err) {
+      setLocalError(err.response?.data?.message || 'Failed to cancel invitation')
+    } finally {
+      setInvitationActionId(null)
     }
   }
 
@@ -153,7 +190,7 @@ function WorkspaceDetail() {
               )}
               {tab === 'team' && canManageTeam && (
                 <button type="button" onClick={() => setMemberModal(true)} className="btn-primary">
-                  <UserPlus size={16} /> Add Member
+                  <UserPlus size={16} /> Invite Member
                 </button>
               )}
             </>
@@ -262,26 +299,23 @@ function WorkspaceDetail() {
           </div>
         )}
 
+        {tab === 'team' && canManageTeam && (
+          <PendingInvitationsList
+            invitations={invitations}
+            onResend={handleResendInvitation}
+            onCancel={handleCancelInvitation}
+            loadingId={invitationActionId}
+          />
+        )}
+
         <TaskFormModal isOpen={taskModal} onClose={() => setTaskModal(false)} workspaceId={workspaceId} onSuccess={() => dispatch(fetchTasks({ workspaceId }))} />
 
-        <Modal isOpen={memberModal} onClose={() => setMemberModal(false)} title="Add Team Member">
-          <form onSubmit={handleInvite} className="space-y-4">
-            <p className="text-sm text-theme-muted">The user must already be registered on {APP_NAME}.</p>
-            <div>
-              <label className="label-field">Email address</label>
-              <input type="email" className="input-field" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colleague@email.com" required />
-            </div>
-            <div>
-              <label className="label-field">Role</label>
-              <select className="input-field" value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
-                {Object.entries(WORKSPACE_ROLE_LABELS).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
-            </div>
-            <button type="submit" className="btn-primary w-full"><UserPlus size={16} /> Add to Team</button>
-          </form>
-        </Modal>
+        <InviteMemberModal
+          isOpen={memberModal}
+          onClose={() => setMemberModal(false)}
+          workspaceId={workspaceId}
+          onSuccess={handleInvitationSent}
+        />
       </div>
     </Layout>
   )

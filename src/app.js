@@ -11,6 +11,7 @@ const authRoutes = require("./routes/authRoutes");
 const workspaceRoutes = require("./routes/workspaceRoutes");
 const projectNestedRoutes = require("./routes/projectRoutes");
 const projectRoutes = require("./routes/taskRoutes");
+const invitationRoutes = require("./routes/invitationRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
@@ -48,6 +49,7 @@ app.use(morgan("dev"));
 app.use("/api/auth", authRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/workspaces/:workspaceId/projects", projectNestedRoutes);
+app.use("/api/invitations", invitationRoutes);
 app.use("/api/projects", projectRoutes);
 
 //Swagger Docs

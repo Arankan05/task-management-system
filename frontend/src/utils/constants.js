@@ -36,4 +36,24 @@ export const WORKSPACE_COLORS = ['#7C3AED', '#A855F7', '#6D28D9', '#EC4899', '#3
 
 export const PROJECT_COLORS = ['#A855F7', '#7C3AED', '#F59E0B', '#EF4444', '#06B6D4', '#8B5CF6']
 
+export const INVITE_ROLE_OPTIONS = [
+  { value: 'ADMINISTRATOR', label: 'Admin' },
+  { value: 'PROJECT_MANAGER', label: 'Manager' },
+  { value: 'COLLABORATOR', label: 'Member' },
+]
+
+export const INVITATION_STATUS = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  EXPIRED: 'EXPIRED',
+  CANCELLED: 'CANCELLED',
+}
+
+export const INVITATION_STATUS_LABELS = {
+  PENDING: 'Pending',
+  ACCEPTED: 'Accepted',
+  EXPIRED: 'Expired',
+  CANCELLED: 'Cancelled',
+}
+
 export { WORKSPACE_ROLES, WORKSPACE_ROLE_LABELS }
