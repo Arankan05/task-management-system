@@ -6,17 +6,20 @@ import { connectSocket, disconnectSocket } from '../services/socket'
 
 function AppInitializer({ children }) {
   const dispatch = useDispatch()
-  const token = useSelector((state) => state.auth?.token)
+  const { isAuthenticated, initialized } = useSelector((state) => state.auth)
 
   useEffect(() => {
-    if (token) {
-      dispatch(fetchProfile())
+    dispatch(fetchProfile())
+  }, [dispatch])
+
+  useEffect(() => {
+    if (initialized && isAuthenticated) {
       dispatch(fetchWorkspaces())
       connectSocket()
-    } else {
+    } else if (initialized) {
       disconnectSocket()
     }
-  }, [dispatch, token])
+  }, [dispatch, initialized, isAuthenticated])
 
   return children
 }

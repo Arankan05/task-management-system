@@ -16,7 +16,7 @@ import Layout from '../components/Layout'
 import ProfileAvatar from '../components/ProfileAvatar'
 import Alert from '../components/ui/Alert'
 import Loader from '../components/ui/Loader'
-import { fetchProfile, updateProfile, logout } from '../store/slices/authSlice'
+import { fetchProfile, updateProfile, logoutUser } from '../store/slices/authSlice'
 import { disconnectSocket } from '../services/socket'
 
 const GENDER_OPTIONS = [
@@ -138,9 +138,9 @@ function Profile() {
     }
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     disconnectSocket()
-    dispatch(logout())
+    await dispatch(logoutUser())
     navigate('/login')
   }
 
