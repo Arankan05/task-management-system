@@ -16,6 +16,7 @@ import {
 import Layout from '../components/Layout'
 import Alert from '../components/ui/Alert'
 import Modal from '../components/ui/Modal'
+import BrandLogo, { APP_NAME } from '../components/BrandLogo'
 import {
   toggleDarkMode,
   setFontFamily,
@@ -106,7 +107,7 @@ function Settings() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `taskflow-backup-${Date.now()}.json`
+    a.download = `taskpulse-backup-${Date.now()}.json`
     a.click()
     URL.revokeObjectURL(url)
     setMessage({ text: 'Backup downloaded successfully.', type: 'success' })
@@ -155,7 +156,7 @@ function Settings() {
       <div className="page-container max-w-3xl">
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-theme">Settings</h1>
-          <p className="text-theme-muted mt-1">Customize your TaskFlow experience</p>
+          <p className="text-theme-muted mt-1">Customize your {APP_NAME} experience</p>
         </div>
 
         {message.text && (
@@ -276,6 +277,9 @@ function Settings() {
           </SettingsSection>
 
           <SettingsSection icon={Info} title="About" description="Application information">
+            <SettingRow label="Application" description="Product name">
+              <BrandLogo size="sm" />
+            </SettingRow>
             <SettingRow label="App Version" description="Current release">
               <span className="text-sm font-semibold text-primary">v{APP_VERSION}</span>
             </SettingRow>

@@ -17,7 +17,7 @@ export const getTaskStats = (tasks = []) => ({
   total: tasks.length,
   todo: tasks.filter((t) => t.status === 'TODO').length,
   inProgress: tasks.filter((t) => t.status === 'IN_PROGRESS').length,
-  completed: tasks.filter((t) => t.status === 'COMPLETED').length,
+  done: tasks.filter((t) => t.status === 'DONE').length,
   highPriority: tasks.filter((t) => t.priority === 'HIGH').length,
 })
 
@@ -62,7 +62,7 @@ export const filterTasks = (tasks, filters) => {
 export const getChartData = (tasks = []) => [
   { name: 'To Do', value: tasks.filter((t) => t.status === 'TODO').length, fill: '#64748b' },
   { name: 'In Progress', value: tasks.filter((t) => t.status === 'IN_PROGRESS').length, fill: '#f59e0b' },
-  { name: 'Done', value: tasks.filter((t) => t.status === 'COMPLETED').length, fill: '#10b981' },
+  { name: 'Done', value: tasks.filter((t) => t.status === 'DONE').length, fill: '#10b981' },
 ]
 
 export const getPriorityChartData = (tasks = []) => [

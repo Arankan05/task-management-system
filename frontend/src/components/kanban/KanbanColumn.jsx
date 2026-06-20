@@ -5,7 +5,7 @@ import KanbanCard from './KanbanCard'
 const columnStyles = {
   TODO: 'border-t-slate-400 bg-slate-50/50',
   IN_PROGRESS: 'border-t-amber-400 bg-amber-50/30',
-  COMPLETED: 'border-t-emerald-400 bg-emerald-50/30',
+  DONE: 'border-t-emerald-400 bg-emerald-50/30',
 }
 
 function KanbanColumn({ column, tasks }) {
