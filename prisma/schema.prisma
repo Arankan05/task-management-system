@@ -31,6 +31,7 @@ model User {
   createdTasks        Task[]            @relation("CreatedBy")
   comments            Comment[]
   attachments         Attachment[]
+  refreshTokens       RefreshToken[]
 }
 
 model Workspace {
@@ -163,4 +164,17 @@ model Attachment {
 
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }

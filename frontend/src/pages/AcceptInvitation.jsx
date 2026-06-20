@@ -13,7 +13,7 @@ import { formatDate } from '../utils/taskHelpers'
 function AcceptInvitation() {
   const { token } = useParams()
   const navigate = useNavigate()
-  const { token: authToken, user } = useSelector((s) => s.auth)
+  const { isAuthenticated, user } = useSelector((s) => s.auth)
 
   const [invitation, setInvitation] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -34,7 +34,7 @@ function AcceptInvitation() {
   const emailMatches = user?.email?.toLowerCase() === invitation?.email?.toLowerCase()
 
   const canAccept =
-    authToken &&
+    isAuthenticated &&
     emailMatches &&
     invitation?.isPending &&
     !invitation?.isExpired &&
@@ -136,7 +136,7 @@ function AcceptInvitation() {
 
                 {invitation.isPending && !invitation.isExpired && (
                   <>
-                    {!authToken && (
+                    {!isAuthenticated && (
                       <div className="space-y-3">
                         <p className="text-sm text-theme-muted text-center">
                           {invitation.userExists
@@ -172,7 +172,7 @@ function AcceptInvitation() {
                       </div>
                     )}
 
-                    {authToken && !emailMatches && (
+                    {isAuthenticated && !emailMatches && (
                       <Alert
                         message={`You are signed in as ${user?.email}. This invitation was sent to ${invitation.email}. Please sign in with the correct account.`}
                         type="error"

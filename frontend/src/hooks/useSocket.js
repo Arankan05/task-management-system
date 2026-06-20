@@ -3,16 +3,16 @@ import { useSelector } from 'react-redux'
 import { connectSocket, disconnectSocket } from '../services/socket'
 
 export function useSocket() {
-  const { token } = useSelector((state) => state.auth)
+  const { isAuthenticated } = useSelector((state) => state.auth)
 
   useEffect(() => {
-    if (token) {
+    if (isAuthenticated) {
       connectSocket()
     } else {
       disconnectSocket()
     }
     return () => disconnectSocket()
-  }, [token])
+  }, [isAuthenticated])
 }
 
 export default useSocket

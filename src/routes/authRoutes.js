@@ -4,6 +4,8 @@ const router = express.Router();
 const {
     registerUser,
     loginUser,
+    logoutUser,
+    refreshAccessToken,
     getProfile,
     updateProfile,
     forgotPassword,
@@ -68,6 +70,8 @@ router.post(
  *         description: Login successful
  */
 router.post("/login", loginUser);
+router.post("/refresh", refreshAccessToken);
+router.post("/logout", logoutUser);
 
 router.post("/forgot-password", forgotPassword);
 router.post("/verify-reset-otp", verifyResetOtp);
