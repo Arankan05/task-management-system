@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import api from '../../services/api'
 import Alert from '../../components/ui/Alert'
 import Footer from '../../components/Footer'
+import BrandLogo, { APP_NAME } from '../../components/BrandLogo'
 import { Mail, ArrowLeft, Send } from 'lucide-react'
 
 function ForgotPassword() {
@@ -42,12 +43,7 @@ function ForgotPassword() {
       <div className="flex flex-1">
         <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 p-12 flex-col justify-between relative overflow-hidden">
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center overflow-hidden">
-                <img src="/taskpulse-logo.png" alt="" className="w-full h-full object-cover" />
-              </div>
-              <span className="text-white text-xl font-bold">TASKPULSE</span>
-            </div>
+            <BrandLogo size="lg" lightText className="mb-8" />
             <h1 className="text-4xl font-bold text-white leading-tight mb-4">
               Forgot your<br />password?
             </h1>
@@ -65,7 +61,7 @@ function ForgotPassword() {
                 <ArrowLeft size={14} /> Back to login
               </Link>
               <h2 className="text-2xl font-bold text-slate-900 mb-1">Reset password</h2>
-              <p className="text-slate-500 text-sm mb-6">We&apos;ll email a code from TASKPULSE</p>
+              <p className="text-slate-500 text-sm mb-6">We&apos;ll email a code from {APP_NAME}</p>
 
               {error && <div className="mb-4"><Alert message={error} type="error" onClose={() => setError('')} /></div>}
               {success && <div className="mb-4"><Alert message={success} type="success" onClose={() => setSuccess('')} /></div>}

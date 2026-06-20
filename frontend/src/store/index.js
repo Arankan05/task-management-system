@@ -11,6 +11,8 @@ import {
 } from 'redux-persist'
 import storage from './storage'
 import authReducer from './slices/authSlice'
+import workspacesReducer from './slices/workspacesSlice'
+import projectsReducer from './slices/projectsSlice'
 import tasksReducer from './slices/tasksSlice'
 import filtersReducer from './slices/filtersSlice'
 import settingsReducer from './slices/settingsSlice'
@@ -29,6 +31,8 @@ const settingsPersistConfig = {
 
 const rootReducer = combineReducers({
   auth: persistReducer(authPersistConfig, authReducer),
+  workspaces: workspacesReducer,
+  projects: projectsReducer,
   tasks: tasksReducer,
   filters: filtersReducer,
   settings: persistReducer(settingsPersistConfig, settingsReducer),

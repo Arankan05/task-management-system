@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { loginUser, clearAuthError } from '../../store/slices/authSlice'
 import Alert from '../../components/ui/Alert'
 import Footer from '../../components/Footer'
+import BrandLogo, { APP_NAME } from '../../components/BrandLogo'
 import { LogIn, Mail, Lock } from 'lucide-react'
 
 function Login() {
@@ -25,7 +26,7 @@ function Login() {
 
     try {
       await dispatch(loginUser({ email, password })).unwrap()
-      navigate('/dashboard')
+      navigate('/workspaces')
     } catch {
       // error handled in slice
     }
@@ -38,17 +39,12 @@ function Login() {
       <div className="flex flex-1">
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 p-12 flex-col justify-between relative overflow-hidden">
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <span className="text-white font-bold">TF</span>
-            </div>
-            <span className="text-white text-xl font-bold">TaskFlow</span>
-          </div>
+          <BrandLogo size="lg" lightText className="mb-8" />
           <h1 className="text-4xl font-bold text-white leading-tight mb-4">
             Manage tasks<br />with clarity.
           </h1>
           <p className="text-brand-100 text-lg max-w-md">
-            A modern workspace for teams to plan, track, and deliver work efficiently.
+            Sign in to {APP_NAME} and take control of your team&apos;s work.
           </p>
         </div>
         <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-white/5" />
@@ -57,11 +53,8 @@ function Login() {
 
       <div className="flex-1 flex items-center justify-center p-6 bg-surface-muted">
         <div className="w-full max-w-md animate-slide-up">
-          <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">TF</span>
-            </div>
-            <span className="text-lg font-bold text-slate-900">TaskFlow</span>
+          <div className="lg:hidden flex justify-center mb-8">
+            <BrandLogo size="md" />
           </div>
 
           <div className="glass-card p-8">

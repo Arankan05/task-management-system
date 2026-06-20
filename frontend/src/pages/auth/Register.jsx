@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import api from '../../services/api'
 import Alert from '../../components/ui/Alert'
 import Footer from '../../components/Footer'
+import BrandLogo, { APP_NAME } from '../../components/BrandLogo'
 import { UserPlus, Mail, Lock, User } from 'lucide-react'
 
 function Register() {
@@ -46,17 +47,12 @@ function Register() {
       <div className="flex flex-1">
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 p-12 flex-col justify-between relative overflow-hidden">
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <span className="text-white font-bold">TF</span>
-            </div>
-            <span className="text-white text-xl font-bold">TaskFlow</span>
-          </div>
+          <BrandLogo size="lg" lightText className="mb-8" />
           <h1 className="text-4xl font-bold text-white leading-tight mb-4">
             Start organizing<br />your work today.
           </h1>
           <p className="text-brand-100 text-lg max-w-md">
-            Join TaskFlow and take control of your projects with powerful task management tools.
+            Join {APP_NAME} and take control of your projects with powerful task management tools.
           </p>
         </div>
         <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-white/5" />
@@ -66,7 +62,7 @@ function Register() {
         <div className="w-full max-w-md animate-slide-up">
           <div className="glass-card p-8">
             <h2 className="text-2xl font-bold text-slate-900 mb-1">Create account</h2>
-            <p className="text-slate-500 text-sm mb-6">Get started with TaskFlow</p>
+            <p className="text-slate-500 text-sm mb-6">Get started with {APP_NAME}</p>
 
             {error && <div className="mb-4"><Alert message={error} type="error" onClose={() => setError('')} /></div>}
 
