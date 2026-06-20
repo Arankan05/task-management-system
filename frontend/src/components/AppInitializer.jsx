@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchProfile } from '../store/slices/authSlice'
-import { fetchTasks } from '../store/slices/tasksSlice'
+import { fetchWorkspaces } from '../store/slices/workspacesSlice'
 import { connectSocket, disconnectSocket } from '../services/socket'
 
 function AppInitializer({ children }) {
@@ -11,7 +11,7 @@ function AppInitializer({ children }) {
   useEffect(() => {
     if (token) {
       dispatch(fetchProfile())
-      dispatch(fetchTasks())
+      dispatch(fetchWorkspaces())
       connectSocket()
     } else {
       disconnectSocket()

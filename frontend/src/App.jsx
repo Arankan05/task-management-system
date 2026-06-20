@@ -1,14 +1,16 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import VerifyOtp from './pages/auth/VerifyOtp'
 import ResetPassword from './pages/auth/ResetPassword'
-import Dashboard from './pages/Dashboard'
-import Tasks from './pages/Tasks'
-import TaskDetail from './pages/TaskDetail'
-import Kanban from './pages/Kanban'
+import Workspaces from './pages/Workspaces'
+import WorkspaceDetail from './pages/WorkspaceDetail'
+import WorkspaceKanban from './pages/WorkspaceKanban'
+import WorkspaceTaskDetail from './pages/WorkspaceTaskDetail'
+import WorkspaceSettings from './pages/WorkspaceSettings'
+import ProjectDashboard from './pages/ProjectDashboard'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
@@ -16,8 +18,13 @@ import ProtectedRoute from './components/ProtectedRoute'
 
 function PublicRoute({ children }) {
   const token = useSelector((state) => state.auth?.token)
-  if (token) return <Navigate to="/dashboard" replace />
+  if (token) return <Navigate to="/workspaces" replace />
   return children
+}
+
+function LegacyProjectRedirect() {
+  const { workspaceId } = useParams()
+  return <Navigate to={`/workspaces/${workspaceId}`} replace />
 }
 
 function App() {
@@ -31,10 +38,18 @@ function App() {
         <Route path="/verify-otp" element={<PublicRoute><VerifyOtp /></PublicRoute>} />
         <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
 
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-        <Route path="/tasks/:id" element={<ProtectedRoute><TaskDetail /></ProtectedRoute>} />
-        <Route path="/kanban" element={<ProtectedRoute><Kanban /></ProtectedRoute>} />
+        <Route path="/workspaces" element={<ProtectedRoute><Workspaces /></ProtectedRoute>} />
+        <Route path="/workspaces/:workspaceId" element={<ProtectedRoute><WorkspaceDetail /></ProtectedRoute>} />
+        <Route path="/workspaces/:workspaceId/kanban" element={<ProtectedRoute><WorkspaceKanban /></ProtectedRoute>} />
+        <Route path="/workspaces/:workspaceId/settings" element={<ProtectedRoute><WorkspaceSettings /></ProtectedRoute>} />
+        <Route path="/workspaces/:workspaceId/tasks/:taskId" element={<ProtectedRoute><WorkspaceTaskDetail /></ProtectedRoute>} />
+        <Route path="/workspaces/:workspaceId/projects/:projectId" element={<ProtectedRoute><ProjectDashboard /></ProtectedRoute>} />
+        <Route path="/workspaces/:workspaceId/projects/:projectId/*" element={<ProtectedRoute><LegacyProjectRedirect /></ProtectedRoute>} />
+
+        <Route path="/dashboard" element={<Navigate to="/workspaces" replace />} />
+        <Route path="/tasks" element={<Navigate to="/workspaces" replace />} />
+        <Route path="/kanban" element={<Navigate to="/workspaces" replace />} />
+
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 

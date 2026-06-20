@@ -10,6 +10,7 @@ import Loader from '../components/ui/Loader'
 import Badge from '../components/ui/Badge'
 import { fetchTasks } from '../store/slices/tasksSlice'
 import { getTaskStats, getChartData, getPriorityChartData, formatStatus, formatPriority, formatDate } from '../utils/taskHelpers'
+import { APP_NAME } from '../components/BrandLogo'
 
 function StatCard({ title, value, icon: Icon, color, sub }) {
   const colors = {
@@ -60,7 +61,7 @@ function Dashboard() {
       <div className="page-container">
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-slate-500 mt-1">Overview of your task management workspace</p>
+          <p className="text-slate-500 mt-1">Overview of your {APP_NAME} workspace</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
