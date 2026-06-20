@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import api from '../../services/api'
 import Alert from '../../components/ui/Alert'
+import Footer from '../../components/Footer'
 import { UserPlus, Mail, Lock, User } from 'lucide-react'
 
 function Register() {
@@ -41,7 +42,8 @@ function Register() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex flex-1">
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 p-12 flex-col justify-between relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-8">
@@ -110,6 +112,8 @@ function Register() {
           </div>
         </div>
       </div>
+      </div>
+      <Footer />
     </div>
   )
 }

@@ -7,12 +7,21 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      String   @default("COLLABORATOR")
-  createdAt DateTime @default(now())
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          String    @default("COLLABORATOR")
+  profilePhoto  String?   @db.Text
+  contactNumber String?
+  address       String?   @db.Text
+  dateOfBirth   DateTime?
+  gender        String?
+  resetOtp          String?
+  resetOtpExpires   DateTime?
+  resetOtpSendCount Int       @default(0)
+  resetOtpWindowStart DateTime?
+  createdAt     DateTime  @default(now())
 
   assignedTasks Task[] @relation("AssignedTo")
   createdTasks  Task[] @relation("CreatedBy")

@@ -18,9 +18,21 @@ export const fetchProfile = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const { data } = await api.get('/auth/profile')
-      return data.user
+      return data.data
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load profile')
+    }
+  }
+)
+
+export const updateProfile = createAsyncThunk(
+  'auth/updateProfile',
+  async (profileData, { rejectWithValue }) => {
+    try {
+      const { data } = await api.put('/auth/profile', profileData)
+      return data.data
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to update profile')
     }
   }
 )
@@ -72,6 +84,18 @@ const authSlice = createSlice({
         } else {
           state.user = { ...action.payload }
         }
+      })
+      .addCase(updateProfile.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.loading = false
+        state.user = { ...state.user, ...action.payload }
+      })
+      .addCase(updateProfile.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
       })
   },
 })
