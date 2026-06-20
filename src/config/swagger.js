@@ -4,9 +4,9 @@ const options = {
     definition: {
         openapi: "3.0.0",
         info: {
-            title: "Task Management API",
+            title: "TASKPULSE API",
             version: "1.0.0",
-            description: "Task Management System API Documentation",
+            description: "TASKPULSE — Task Management System API Documentation",
         },
         servers: [
             {

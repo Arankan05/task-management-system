@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import Modal from '../ui/Modal'
 import Alert from '../ui/Alert'
 import { createTask, updateTask } from '../../store/slices/tasksSlice'
+import { getWorkspaceMembers } from '../../services/workspaceService'
 import { validateTaskForm } from '../../utils/taskHelpers'
 import { TASK_STATUSES, TASK_PRIORITIES, STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants'
 
@@ -15,12 +16,19 @@ const emptyForm = {
   assignedToId: '',
 }
 
-function TaskFormModal({ isOpen, onClose, task = null, onSuccess }) {
+function TaskFormModal({ isOpen, onClose, task = null, projectId, workspaceId, onSuccess }) {
   const dispatch = useDispatch()
   const { actionLoading, error } = useSelector((state) => state.tasks)
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [localError, setLocalError] = useState('')
+  const [members, setMembers] = useState([])
+
+  useEffect(() => {
+    if (workspaceId && isOpen) {
+      getWorkspaceMembers(workspaceId).then(setMembers).catch(() => setMembers([]))
+    }
+  }, [workspaceId, isOpen])
 
   useEffect(() => {
     if (task) {
@@ -57,15 +65,16 @@ function TaskFormModal({ isOpen, onClose, task = null, onSuccess }) {
       description: form.description.trim() || undefined,
       status: form.status,
       priority: form.priority,
-      dueDate: form.dueDate || undefined,
-      assignedToId: form.assignedToId || undefined,
-    }
+        dueDate: form.dueDate || undefined,
+        assignedToId: form.assignedToId || undefined,
+        progress: form.status === 'DONE' ? 100 : form.status === 'IN_PROGRESS' ? 50 : 0,
+      }
 
     try {
       if (task) {
         await dispatch(updateTask({ id: task.id, payload })).unwrap()
       } else {
-        await dispatch(createTask(payload)).unwrap()
+        await dispatch(createTask({ workspaceId, projectId, ...payload })).unwrap()
       }
       onSuccess?.()
       onClose()
@@ -82,7 +91,7 @@ function TaskFormModal({ isOpen, onClose, task = null, onSuccess }) {
         )}
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Title *</label>
+          <label className="label-field">Title *</label>
           <input
             value={form.title}
             onChange={(e) => handleChange('title', e.target.value)}
@@ -93,7 +102,7 @@ function TaskFormModal({ isOpen, onClose, task = null, onSuccess }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+          <label className="label-field">Description</label>
           <textarea
             value={form.description}
             onChange={(e) => handleChange('description', e.target.value)}
@@ -105,7 +114,7 @@ function TaskFormModal({ isOpen, onClose, task = null, onSuccess }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
+            <label className="label-field">Status</label>
             <select value={form.status} onChange={(e) => handleChange('status', e.target.value)} className="input-field">
               {TASK_STATUSES.map((s) => (
                 <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -113,7 +122,7 @@ function TaskFormModal({ isOpen, onClose, task = null, onSuccess }) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Priority</label>
+            <label className="label-field">Priority</label>
             <select value={form.priority} onChange={(e) => handleChange('priority', e.target.value)} className="input-field">
               {TASK_PRIORITIES.map((p) => (
                 <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
@@ -121,7 +130,7 @@ function TaskFormModal({ isOpen, onClose, task = null, onSuccess }) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Due Date</label>
+            <label className="label-field">Due Date</label>
             <input
               type="date"
               value={form.dueDate}
@@ -131,6 +140,22 @@ function TaskFormModal({ isOpen, onClose, task = null, onSuccess }) {
             {errors.dueDate && <p className="text-xs text-red-500 mt-1">{errors.dueDate}</p>}
           </div>
         </div>
+
+        {workspaceId && members.length > 0 && (
+          <div>
+            <label className="label-field">Assign to</label>
+            <select
+              value={form.assignedToId}
+              onChange={(e) => handleChange('assignedToId', e.target.value)}
+              className="input-field"
+            >
+              <option value="">Unassigned</option>
+              {members.map((m) => (
+                <option key={m.userId} value={m.userId}>{m.user?.name || m.user?.email}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>

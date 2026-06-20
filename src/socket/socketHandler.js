@@ -10,6 +10,10 @@ const initSocketHandler = (io) => {
       console.log(`User ${userId} joined their room`);
     });
 
+    socket.on('join:workspace', (workspaceId) => {
+      socket.join(`workspace:${workspaceId}`);
+    });
+
     socket.on('join:project', (projectId) => {
       socket.join(`project:${projectId}`);
     });

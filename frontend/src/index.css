@@ -47,6 +47,43 @@
     @apply rounded-2xl shadow-card;
   }
 
+  .stat-card {
+    @apply glass-card p-5 hover:shadow-elevated transition-all duration-300;
+  }
+
+  .empty-state {
+    @apply glass-card p-12 flex flex-col items-center justify-center text-center;
+  }
+
+  .section-card {
+    @apply glass-card overflow-hidden;
+  }
+
+  .section-card-header {
+    @apply px-6 py-4 border-b border-theme;
+    background-color: color-mix(in srgb, var(--color-surface) 50%, transparent);
+  }
+
+  .filter-bar {
+    @apply flex flex-wrap gap-3 p-4 glass-card mb-6;
+  }
+
+  .settings-panel {
+    @apply glass-card p-6 sm:p-8;
+  }
+
+  .settings-section-title {
+    @apply text-base font-semibold text-theme mb-1;
+  }
+
+  .settings-section-desc {
+    @apply text-sm text-theme-muted mb-5;
+  }
+
+  .label-field {
+    @apply block text-sm font-medium text-theme mb-1.5;
+  }
+
   .text-theme {
     color: var(--color-text);
   }

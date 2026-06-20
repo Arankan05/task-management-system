@@ -6,11 +6,7 @@ let socket = null
 let storeRef = null
 let listenersAttached = false
 let connectionWarningShown = false
-
-function userOwnsTask(task, userId) {
-  if (!task || !userId) return false
-  return task.createdById === userId || task.assignedToId === userId
-}
+let activeProjectId = null
 
 function attachListeners() {
   if (!socket || !storeRef || listenersAttached) return
@@ -18,52 +14,32 @@ function attachListeners() {
   socket.on('connect', () => {
     connectionWarningShown = false
     const user = storeRef.getState().auth?.user
-    if (user?.id) {
-      socket.emit('join:user', user.id)
-    }
+    if (user?.id) socket.emit('join:user', user.id)
+    if (activeProjectId) socket.emit('join:project', activeProjectId)
   })
 
   socket.on('connect_error', () => {
     if (!connectionWarningShown) {
-      console.warn(
-        '[TaskFlow] Real-time connection failed. Start the backend: npm run dev (from project root, port 5000).'
-      )
+      console.warn('[TASKPULSE] Real-time connection failed. Start backend: npm run dev')
       connectionWarningShown = true
     }
   })
 
-  socket.on('task:created', (payload) => {
+  const handleTaskEvent = (type) => (payload) => {
     const task = payload.task || payload
-    const userId = storeRef.getState().auth?.user?.id
-    if (task?.id && userOwnsTask(task, userId)) {
-      storeRef.dispatch({ type: 'tasks/upsertTask', payload: task })
+    const projectId = storeRef.getState().tasks?.activeProjectId
+    if (task?.id && (!projectId || task.projectId === projectId)) {
+      storeRef.dispatch({ type: `tasks/${type}`, payload: type === 'removeTask' ? (payload.taskId || payload.id) : task })
     }
-  })
+  }
 
-  socket.on('task:updated', (payload) => {
-    const task = payload.task || payload
-    const userId = storeRef.getState().auth?.user?.id
-    if (task?.id && userOwnsTask(task, userId)) {
-      storeRef.dispatch({ type: 'tasks/upsertTask', payload: task })
-    }
-  })
-
+  socket.on('task:created', handleTaskEvent('upsertTask'))
+  socket.on('task:updated', handleTaskEvent('upsertTask'))
   socket.on('task:deleted', (payload) => {
     const id = payload.taskId || payload.id
-    const task = payload.task
-    const userId = storeRef.getState().auth?.user?.id
-    if (id && (!task || userOwnsTask(task, userId))) {
-      storeRef.dispatch({ type: 'tasks/removeTask', payload: id })
-    }
+    if (id) storeRef.dispatch({ type: 'tasks/removeTask', payload: id })
   })
-
-  socket.on('task:assigned', (payload) => {
-    const task = payload.task || payload
-    const userId = storeRef.getState().auth?.user?.id
-    if (task?.id && userOwnsTask(task, userId)) {
-      storeRef.dispatch({ type: 'tasks/upsertTask', payload: task })
-    }
-  })
+  socket.on('task:assigned', handleTaskEvent('upsertTask'))
 
   listenersAttached = true
 }
@@ -72,14 +48,15 @@ export function setupSocket(store) {
   storeRef = store
 }
 
+export const joinProjectRoom = (projectId) => {
+  activeProjectId = projectId
+  if (socket?.connected) socket.emit('join:project', projectId)
+}
+
 export const connectSocket = () => {
   if (!storeRef) return null
-
   const token = storeRef.getState().auth?.token
-  if (!token) {
-    disconnectSocket()
-    return null
-  }
+  if (!token) { disconnectSocket(); return null }
 
   if (socket) {
     socket.auth = { token }
@@ -93,7 +70,6 @@ export const connectSocket = () => {
     reconnection: true,
     reconnectionAttempts: 5,
     reconnectionDelay: 3000,
-    timeout: 10000,
   })
 
   attachListeners()
@@ -107,6 +83,7 @@ export const disconnectSocket = () => {
     socket = null
     listenersAttached = false
     connectionWarningShown = false
+    activeProjectId = null
   }
 }
 
