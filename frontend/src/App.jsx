@@ -14,11 +14,15 @@ import ProjectDashboard from './pages/ProjectDashboard'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
+import AcceptInvitation from './pages/AcceptInvitation'
+import InvitationSuccess from './pages/InvitationSuccess'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function PublicRoute({ children }) {
   const token = useSelector((state) => state.auth?.token)
-  if (token) return <Navigate to="/workspaces" replace />
+  const params = new URLSearchParams(window.location.search)
+  const redirect = params.get('redirect')
+  if (token) return <Navigate to={redirect || '/workspaces'} replace />
   return children
 }
 
@@ -37,6 +41,9 @@ function App() {
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
         <Route path="/verify-otp" element={<PublicRoute><VerifyOtp /></PublicRoute>} />
         <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+
+        <Route path="/invitations/:token" element={<AcceptInvitation />} />
+        <Route path="/invitations/:token/success" element={<InvitationSuccess />} />
 
         <Route path="/workspaces" element={<ProtectedRoute><Workspaces /></ProtectedRoute>} />
         <Route path="/workspaces/:workspaceId" element={<ProtectedRoute><WorkspaceDetail /></ProtectedRoute>} />

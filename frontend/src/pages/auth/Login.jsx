@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { loginUser, clearAuthError } from '../../store/slices/authSlice'
 import Alert from '../../components/ui/Alert'
@@ -9,9 +9,16 @@ import { LogIn, Mail, Lock } from 'lucide-react'
 
 function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || '/workspaces'
   const dispatch = useDispatch()
   const { loading, error } = useSelector((state) => state.auth ?? {})
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(searchParams.get('email') || '')
+
+  useEffect(() => {
+    const prefill = searchParams.get('email')
+    if (prefill) setEmail(prefill)
+  }, [searchParams])
   const [password, setPassword] = useState('')
   const [validationError, setValidationError] = useState('')
 
@@ -26,7 +33,7 @@ function Login() {
 
     try {
       await dispatch(loginUser({ email, password })).unwrap()
-      navigate('/workspaces')
+      navigate(redirectTo)
     } catch {
       // error handled in slice
     }
@@ -91,7 +98,14 @@ function Login() {
 
             <p className="text-center text-slate-500 text-sm mt-6">
               Don't have an account?{' '}
-              <Link to="/register" className="text-brand-600 font-semibold hover:text-brand-700">Create one</Link>
+              <Link
+                to={redirectTo !== '/workspaces'
+                  ? `/register?email=${encodeURIComponent(email)}&redirect=${encodeURIComponent(redirectTo)}`
+                  : '/register'}
+                className="text-brand-600 font-semibold hover:text-brand-700"
+              >
+                Create one
+              </Link>
             </p>
           </div>
         </div>

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import api from '../../services/api'
 import Alert from '../../components/ui/Alert'
 import Footer from '../../components/Footer'
@@ -8,9 +8,21 @@ import { UserPlus, Mail, Lock, User } from 'lucide-react'
 
 function Register() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' })
+  const [searchParams] = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || ''
+  const [form, setForm] = useState({
+    name: '',
+    email: searchParams.get('email') || '',
+    password: '',
+    confirmPassword: '',
+  })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const prefill = searchParams.get('email')
+    if (prefill) setForm((prev) => ({ ...prev, email: prefill }))
+  }, [searchParams])
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -34,7 +46,13 @@ function Register() {
         email: form.email,
         password: form.password,
       })
-      if (data.success) navigate('/login')
+      if (data.success) {
+        const loginParams = new URLSearchParams()
+        if (form.email) loginParams.set('email', form.email)
+        if (redirectTo) loginParams.set('redirect', redirectTo)
+        const qs = loginParams.toString()
+        navigate(qs ? `/login?${qs}` : '/login')
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed')
     } finally {
@@ -103,7 +121,14 @@ function Register() {
 
             <p className="text-center text-slate-500 text-sm mt-6">
               Already have an account?{' '}
-              <Link to="/login" className="text-brand-600 font-semibold hover:text-brand-700">Sign in</Link>
+              <Link
+                to={redirectTo
+                  ? `/login?email=${encodeURIComponent(form.email)}&redirect=${encodeURIComponent(redirectTo)}`
+                  : '/login'}
+                className="text-brand-600 font-semibold hover:text-brand-700"
+              >
+                Sign in
+              </Link>
             </p>
           </div>
         </div>
