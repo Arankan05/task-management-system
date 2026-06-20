@@ -18,9 +18,21 @@ const createTask = async (data) => {
   });
 };
 
-const getAllTasks = async (filters = {}) => {
+const getAllTasks = async (filters = {}, userId) => {
   return await prisma.task.findMany({
-    where: filters,
+    where: {
+      AND: [
+        {
+          OR: [
+            { createdById: userId },
+            { assignedToId: userId },
+          ],
+        },
+        ...(filters.status ? [{ status: filters.status }] : []),
+        ...(filters.priority ? [{ priority: filters.priority }] : []),
+        ...(filters.assignedToId ? [{ assignedToId: filters.assignedToId }] : []),
+      ],
+    },
     include: {
       createdBy: { select: { id: true, name: true, email: true } },
       assignedTo: { select: { id: true, name: true, email: true } },
@@ -28,6 +40,10 @@ const getAllTasks = async (filters = {}) => {
     orderBy: { createdAt: "desc" },
   });
 };
+
+const userCanAccessTask = (task, userId) =>
+  task &&
+  (task.createdById === userId || task.assignedToId === userId);
 
 const getTaskById = async (id) => {
   return await prisma.task.findUnique({
@@ -101,14 +117,7 @@ const getTasksByAssignee = async (userId) => {
 };
 
 const getMyTasks = async (userId) => {
-  return await prisma.task.findMany({
-    where: { assignedToId: userId },
-    include: {
-      createdBy: { select: { id: true, name: true, email: true } },
-      assignedTo: { select: { id: true, name: true, email: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  return await getAllTasks({}, userId);
 };
 
 const getUserById = async (userId) => {
@@ -140,15 +149,8 @@ const updateTaskPriority = async (id, priority) => {
   });
 }
 
-const getTasksByFilter = async (filters) => {
-  return await prisma.task.findMany({
-    where: filters,
-    include: {
-      createdBy: { select: { id: true, name: true, email: true } },
-      assignedTo: { select: { id: true, name: true, email: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+const getTasksByFilter = async (filters, userId) => {
+  return await getAllTasks(filters, userId);
 };
 
 module.exports = {
@@ -165,4 +167,5 @@ module.exports = {
   updateTaskStatus,
   updateTaskPriority,
   getTasksByFilter,
+  userCanAccessTask,
 };
