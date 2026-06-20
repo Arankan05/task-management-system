@@ -17,6 +17,10 @@ model User {
   address       String?   @db.Text
   dateOfBirth   DateTime?
   gender        String?
+  resetOtp          String?
+  resetOtpExpires   DateTime?
+  resetOtpSendCount Int       @default(0)
+  resetOtpWindowStart DateTime?
   createdAt     DateTime  @default(now())
 
   assignedTasks Task[] @relation("AssignedTo")

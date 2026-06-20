@@ -1,5 +1,15 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import * as taskService from '../../services/taskService'
+import { logout, loginUser } from './authSlice'
+
+const initialState = {
+  items: [],
+  selected: null,
+  loading: false,
+  actionLoading: false,
+  error: null,
+  lastFetched: null,
+}
 
 export const fetchTasks = createAsyncThunk('tasks/fetchAll', async (_, { rejectWithValue }) => {
   try {
@@ -58,15 +68,9 @@ export const updateTaskStatus = createAsyncThunk(
 
 const tasksSlice = createSlice({
   name: 'tasks',
-  initialState: {
-    items: [],
-    selected: null,
-    loading: false,
-    actionLoading: false,
-    error: null,
-    lastFetched: null,
-  },
+  initialState,
   reducers: {
+    clearTasks: () => initialState,
     clearTaskError: (state) => {
       state.error = null
     },
@@ -94,6 +98,13 @@ const tasksSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(logout, () => initialState)
+      .addCase(loginUser.fulfilled, (state) => {
+        state.items = []
+        state.selected = null
+        state.lastFetched = null
+        state.error = null
+      })
       .addCase(fetchTasks.pending, (state) => {
         state.loading = true
         state.error = null
@@ -156,5 +167,5 @@ const tasksSlice = createSlice({
   },
 })
 
-export const { clearTaskError, clearSelectedTask, upsertTask, removeTask } = tasksSlice.actions
+export const { clearTasks, clearTaskError, clearSelectedTask, upsertTask, removeTask } = tasksSlice.actions
 export default tasksSlice.reducer

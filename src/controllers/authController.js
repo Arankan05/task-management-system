@@ -1,7 +1,26 @@
 const prisma = require("../config/db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const validator = require("validator");
 const { successResponse, errorResponse } = require("../utils/response");
+const { sendPasswordResetOtp, OTP_EXPIRY_MINUTES } = require("../services/emailService");
+
+const OTP_MAX_REQUESTS = 3;
+const OTP_WINDOW_MS = 60 * 60 * 1000;
+const RESET_TOKEN_EXPIRY = "15m";
+
+const GENERIC_FORGOT_MSG =
+    "If that email is registered, we sent a verification code.";
+
+const generateOtp = () =>
+    String(Math.floor(100000 + Math.random() * 900000));
+
+const clearResetOtp = {
+    resetOtp: null,
+    resetOtpExpires: null,
+    resetOtpSendCount: 0,
+    resetOtpWindowStart: null,
+};
 
 const USER_SELECT = {
     id: true,
@@ -146,9 +165,180 @@ const updateProfile = async (req, res) => {
     }
 };
 
+const forgotPassword = async (req, res) => {
+    try {
+        const email = (req.body.email || "").trim().toLowerCase();
+
+        if (!email || !validator.isEmail(email)) {
+            return errorResponse(res, "Please enter a valid email address", 400);
+        }
+
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (user) {
+            const now = new Date();
+            let sendCount = user.resetOtpSendCount || 0;
+            let windowStart = user.resetOtpWindowStart;
+
+            if (
+                !windowStart ||
+                now.getTime() - new Date(windowStart).getTime() > OTP_WINDOW_MS
+            ) {
+                sendCount = 0;
+                windowStart = now;
+            }
+
+            if (sendCount >= OTP_MAX_REQUESTS) {
+                return errorResponse(
+                    res,
+                    "Too many OTP requests. Please try again in an hour.",
+                    429
+                );
+            }
+
+            const otp = generateOtp();
+            const hashedOtp = await bcrypt.hash(otp, 10);
+            const expiresAt = new Date(
+                now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000
+            );
+
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    resetOtp: hashedOtp,
+                    resetOtpExpires: expiresAt,
+                    resetOtpSendCount: sendCount + 1,
+                    resetOtpWindowStart: windowStart,
+                },
+            });
+
+            try {
+                await sendPasswordResetOtp(user.email, user.name, otp);
+            } catch (mailErr) {
+                console.error("Failed to send OTP email:", mailErr);
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: clearResetOtp,
+                });
+                return errorResponse(
+                    res,
+                    "Could not send verification email. Please try again later.",
+                    500
+                );
+            }
+        }
+
+        return successResponse(res, GENERIC_FORGOT_MSG, { email });
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+const verifyResetOtp = async (req, res) => {
+    try {
+        const email = (req.body.email || "").trim().toLowerCase();
+        const otp = (req.body.otp || "").trim();
+
+        if (!email || !validator.isEmail(email)) {
+            return errorResponse(res, "Please enter a valid email address", 400);
+        }
+
+        if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+            return errorResponse(res, "Please enter a valid 6-digit code", 400);
+        }
+
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (
+            !user ||
+            !user.resetOtp ||
+            !user.resetOtpExpires ||
+            new Date() > user.resetOtpExpires
+        ) {
+            return errorResponse(res, "Invalid or expired verification code", 400);
+        }
+
+        const isValid = await bcrypt.compare(otp, user.resetOtp);
+
+        if (!isValid) {
+            return errorResponse(res, "Invalid or expired verification code", 400);
+        }
+
+        const resetToken = jwt.sign(
+            { id: user.id, email: user.email, purpose: "password-reset" },
+            process.env.JWT_SECRET,
+            { expiresIn: RESET_TOKEN_EXPIRY }
+        );
+
+        return successResponse(res, "Verification successful", { resetToken });
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+const resetPassword = async (req, res) => {
+    try {
+        const { resetToken, newPassword } = req.body;
+
+        if (!resetToken) {
+            return errorResponse(res, "Reset token is required", 400);
+        }
+
+        if (!newPassword || newPassword.length < 6) {
+            return errorResponse(
+                res,
+                "Password must be at least 6 characters",
+                400
+            );
+        }
+
+        let decoded;
+        try {
+            decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+        } catch {
+            return errorResponse(res, "Invalid or expired reset session", 400);
+        }
+
+        if (decoded.purpose !== "password-reset") {
+            return errorResponse(res, "Invalid reset token", 400);
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: decoded.id },
+        });
+
+        if (!user) {
+            return errorResponse(res, "User not found", 404);
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                ...clearResetOtp,
+            },
+        });
+
+        return successResponse(
+            res,
+            "Password reset successfully. You can now sign in."
+        );
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
     getProfile,
     updateProfile,
+    forgotPassword,
+    verifyResetOtp,
+    resetPassword,
 };

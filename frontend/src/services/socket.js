@@ -7,6 +7,11 @@ let storeRef = null
 let listenersAttached = false
 let connectionWarningShown = false
 
+function userOwnsTask(task, userId) {
+  if (!task || !userId) return false
+  return task.createdById === userId || task.assignedToId === userId
+}
+
 function attachListeners() {
   if (!socket || !storeRef || listenersAttached) return
 
@@ -29,22 +34,35 @@ function attachListeners() {
 
   socket.on('task:created', (payload) => {
     const task = payload.task || payload
-    if (task?.id) storeRef.dispatch({ type: 'tasks/upsertTask', payload: task })
+    const userId = storeRef.getState().auth?.user?.id
+    if (task?.id && userOwnsTask(task, userId)) {
+      storeRef.dispatch({ type: 'tasks/upsertTask', payload: task })
+    }
   })
 
   socket.on('task:updated', (payload) => {
     const task = payload.task || payload
-    if (task?.id) storeRef.dispatch({ type: 'tasks/upsertTask', payload: task })
+    const userId = storeRef.getState().auth?.user?.id
+    if (task?.id && userOwnsTask(task, userId)) {
+      storeRef.dispatch({ type: 'tasks/upsertTask', payload: task })
+    }
   })
 
   socket.on('task:deleted', (payload) => {
     const id = payload.taskId || payload.id
-    if (id) storeRef.dispatch({ type: 'tasks/removeTask', payload: id })
+    const task = payload.task
+    const userId = storeRef.getState().auth?.user?.id
+    if (id && (!task || userOwnsTask(task, userId))) {
+      storeRef.dispatch({ type: 'tasks/removeTask', payload: id })
+    }
   })
 
   socket.on('task:assigned', (payload) => {
     const task = payload.task || payload
-    if (task?.id) storeRef.dispatch({ type: 'tasks/upsertTask', payload: task })
+    const userId = storeRef.getState().auth?.user?.id
+    if (task?.id && userOwnsTask(task, userId)) {
+      storeRef.dispatch({ type: 'tasks/upsertTask', payload: task })
+    }
   })
 
   listenersAttached = true

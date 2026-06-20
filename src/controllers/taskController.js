@@ -1,5 +1,15 @@
 const taskService = require("../services/taskService");
 
+const emitToTaskUsers = (io, event, payload) => {
+  const task = payload.task || payload;
+  const userIds = new Set(
+    [task?.createdById, task?.assignedToId].filter(Boolean)
+  );
+  userIds.forEach((userId) => {
+    io.to(`user:${userId}`).emit(event, payload);
+  });
+};
+
 const createTask = async (req, res) => {
   try {
     const { title, description, status, priority, dueDate, assignedToId } =
@@ -22,9 +32,9 @@ const createTask = async (req, res) => {
       createdById: req.user.id,
     });
 
-    //Emit real-rtime event
+    // Emit only to creator and assignee
     const io = req.app.get("io");
-    io.emit("task:created", {task});
+    emitToTaskUsers(io, "task:created", { task });
 
     return res.status(201).json({
       success: true,
@@ -49,7 +59,7 @@ const getAllTasks = async (req, res) => {
     if (priority) filters.priority = priority;
     if (assignedToId) filters.assignedToId = assignedToId;
 
-    const tasks = await taskService.getAllTasks(filters);
+    const tasks = await taskService.getAllTasks(filters, req.user.id);
 
     return res.status(200).json({
       success: true,
@@ -76,6 +86,13 @@ const getTaskById = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Task not found",
+      });
+    }
+
+    if (!taskService.userCanAccessTask(task, req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this task",
       });
     }
 
@@ -107,6 +124,13 @@ const updateTask = async (req, res) => {
       });
     }
 
+    if (!taskService.userCanAccessTask(existingTask, req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this task",
+      });
+    }
+
     const updatedTask = await taskService.updateTask(id, {
       title,
       description,
@@ -116,9 +140,9 @@ const updateTask = async (req, res) => {
       assignedToId,
     });
 
-    //Emit real-time event
-    const io = req.app.get ("io");
-    io.emit("task:updated", {task: updateTask});
+    // Emit only to creator and assignee
+    const io = req.app.get("io");
+    emitToTaskUsers(io, "task:updated", { task: updatedTask });
 
     return res.status(200).json({
       success: true,
@@ -146,11 +170,17 @@ const deleteTask = async (req, res) => {
       });
     }
 
+    if (!taskService.userCanAccessTask(existingTask, req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this task",
+      });
+    }
+
     await taskService.deleteTask(id);
 
-    //Emit real-time event
     const io = req.app.get("io");
-    io.emit ("task:deleted", {taskId: id});
+    emitToTaskUsers(io, "task:deleted", { taskId: id, task: existingTask });
 
     return res.status(200).json({
       success: true,
@@ -185,6 +215,13 @@ const assignTask = async (req, res) => {
       });
     }
 
+    if (!taskService.userCanAccessTask(existingTask, req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this task",
+      });
+    }
+
      const userExists = await taskService.getUserById(userId);
     if (!userExists) {
       return res.status(404).json({
@@ -195,9 +232,11 @@ const assignTask = async (req, res) => {
 
     const task = await taskService.assignTask(id, userId);
 
-    //Emit real-time event to assigned user's room
     const io = req.app.get("io");
-    io.to('user:${userId}').emit("task:assigned", {task});
+    io.to(`user:${userId}`).emit("task:assigned", { task });
+    if (task.createdById !== userId) {
+      io.to(`user:${task.createdById}`).emit("task:updated", { task });
+    }
 
     return res.status(200).json({
       success: true,
@@ -225,6 +264,13 @@ const unassignTask = async (req, res) => {
       });
     }
 
+    if (!taskService.userCanAccessTask(existingTask, req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this task",
+      });
+    }
+
     const task = await taskService.unassignTask(id);
 
     return res.status(200).json({
@@ -244,6 +290,13 @@ const unassignTask = async (req, res) => {
 const getTasksByAssignee = async (req, res) => {
   try {
     const { userId } = req.params;
+
+    if (userId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only view your own assigned tasks",
+      });
+    }
 
     const userExists = await taskService.getUserById(userId);
     if (!userExists) {
@@ -309,6 +362,10 @@ const updateTaskStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Task not found" });
     }
 
+    if (!taskService.userCanAccessTask(existingTask, req.user.id)) {
+      return res.status(403).json({ success: false, message: "You do not have access to this task" });
+    }
+
     const task = await taskService.updateTaskStatus(id, status);
     return res.status(200).json({ success: true, message: "Task status updated successfully", data: task });
   } catch (error) {
@@ -334,6 +391,10 @@ const updateTaskPriority = async (req, res) => {
       return res.status(404).json({ success: false, message: "Task not found" });
     }
 
+    if (!taskService.userCanAccessTask(existingTask, req.user.id)) {
+      return res.status(403).json({ success: false, message: "You do not have access to this task" });
+    }
+
     const task = await taskService.updateTaskPriority(id, priority);
     return res.status(200).json({ success: true, message: "Task priority updated successfully", data: task });
   } catch (error) {
@@ -343,15 +404,14 @@ const updateTaskPriority = async (req, res) => {
 
 const getTasksByFilter = async (req, res) => {
   try {
-    const { status, priority, assignedToId, createdById } = req.query;
+    const { status, priority, assignedToId } = req.query;
 
     const filters = {};
     if (status) filters.status = status;
     if (priority) filters.priority = priority;
     if (assignedToId) filters.assignedToId = assignedToId;
-    if (createdById) filters.createdById = createdById;
 
-    const tasks = await taskService.getTasksByFilter(filters);
+    const tasks = await taskService.getTasksByFilter(filters, req.user.id);
     return res.status(200).json({ success: true, message: "Tasks retrieved successfully", count: tasks.length, data: tasks });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Failed to retrieve tasks", error: error.message });
