@@ -6,6 +6,9 @@ const {
     loginUser,
     getProfile,
     updateProfile,
+    forgotPassword,
+    verifyResetOtp,
+    resetPassword,
 } = require("../controllers/authController");
 
 const authMiddleware = require("../middleware/authMiddleware");
@@ -65,6 +68,10 @@ router.post(
  *         description: Login successful
  */
 router.post("/login", loginUser);
+
+router.post("/forgot-password", forgotPassword);
+router.post("/verify-reset-otp", verifyResetOtp);
+router.post("/reset-password", resetPassword);
 
 router.get("/profile", authMiddleware, getProfile);
 
