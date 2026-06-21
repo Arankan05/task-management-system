@@ -6,7 +6,7 @@ const { DEFAULT_PROJECT_NAME } = require("./projectService");
 const workspaceInclude = {
   owner: { select: { id: true, name: true, email: true } },
   members: {
-    include: { user: { select: { id: true, name: true, email: true, profilePhoto: true } } },
+    include: { user: { select: { id: true, name: true, email: true, profilePhoto: true, isActive: true, mustResetPassword: true } } },
   },
   _count: { select: { projects: true, members: true } },
 };
@@ -102,7 +102,7 @@ const updateMemberRole = async (workspaceId, userId, role) => {
 const getMembers = async (workspaceId) =>
   prisma.workspaceMember.findMany({
     where: { workspaceId },
-    include: { user: { select: { id: true, name: true, email: true, profilePhoto: true } } },
+    include: { user: { select: { id: true, name: true, email: true, profilePhoto: true, isActive: true, mustResetPassword: true } } },
     orderBy: { joinedAt: "asc" },
   });
 

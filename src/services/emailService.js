@@ -130,6 +130,67 @@ function buildInvitationEmailHtml({ workspaceName, inviterName, role, inviteLink
 </html>`;
 }
 
+function buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl }) {
+    return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#F8FAFC;font-family:Inter,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#7C3AED,#A855F7);padding:28px 32px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">TASKPULSE</h1>
+              <p style="margin:8px 0 0;color:#ede9fe;font-size:13px;">Welcome to the team</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 8px;color:#1E293B;font-size:15px;">Hi ${name || "there"},</p>
+              <p style="margin:0 0 20px;color:#64748b;font-size:14px;line-height:1.6;">
+                An administrator created your TASKPULSE account. Sign in with the credentials below.
+                You will be required to set a new password on first login.
+              </p>
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:20px;">
+                <p style="margin:0 0 8px;color:#64748b;font-size:13px;"><strong>Username:</strong> ${emailAddress}</p>
+                <p style="margin:0;color:#64748b;font-size:13px;"><strong>Temporary password:</strong> <code style="color:#7C3AED;font-size:15px;">${tempPassword}</code></p>
+              </div>
+              <div style="text-align:center;margin:24px 0;">
+                <a href="${loginUrl}" style="display:inline-block;background:#7C3AED;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;font-size:15px;">
+                  Sign In to TASKPULSE
+                </a>
+              </div>
+              <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.5;">
+                For security, change this temporary password immediately after signing in.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+async function sendWelcomeUserEmail({ to, name, emailAddress, tempPassword }) {
+    if (!transporter) {
+        throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
+    }
+
+    const loginUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/login`;
+
+    await transporter.sendMail({
+        from: `"TASKPULSE" <${EMAIL_USER}>`,
+        to,
+        subject: "Your TASKPULSE account has been created",
+        html: buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl }),
+        text: `Your TASKPULSE account was created. Username: ${emailAddress}. Temporary password: ${tempPassword}. Sign in at ${loginUrl} and you will be asked to set a new password.`,
+    });
+}
+
 async function sendWorkspaceInvitation({ to, workspaceName, inviterName, role, inviteLink }) {
     if (!transporter) {
         throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
@@ -148,6 +209,7 @@ async function sendWorkspaceInvitation({ to, workspaceName, inviterName, role, i
 
 module.exports = {
     sendPasswordResetOtp,
+    sendWelcomeUserEmail,
     sendWorkspaceInvitation,
     OTP_EXPIRY_MINUTES,
 };

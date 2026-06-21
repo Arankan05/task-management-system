@@ -5,6 +5,7 @@ import Alert from '../../components/ui/Alert'
 import Footer from '../../components/Footer'
 import BrandLogo, { APP_NAME } from '../../components/BrandLogo'
 import { UserPlus, Mail, Lock, User } from 'lucide-react'
+import { PASSWORD_REQUIREMENTS, validatePasswordClient } from '../../utils/passwordPolicy'
 
 function Register() {
   const navigate = useNavigate()
@@ -36,7 +37,8 @@ function Register() {
     if (!form.name.trim()) return setError('Name is required')
     if (!form.email) return setError('Email is required')
     if (!form.password) return setError('Password is required')
-    if (form.password.length < 6) return setError('Password must be at least 6 characters')
+    const passwordCheck = validatePasswordClient(form.password)
+    if (!passwordCheck.valid) return setError(passwordCheck.message)
     if (form.password !== form.confirmPassword) return setError('Passwords do not match')
 
     setLoading(true)
@@ -105,6 +107,7 @@ function Register() {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <input type="password" placeholder="••••••••" value={form.password} onChange={(e) => handleChange('password', e.target.value)} className="input-field pl-9" />
                 </div>
+                <p className="text-xs text-slate-500 mt-1">{PASSWORD_REQUIREMENTS}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm Password</label>
