@@ -11,23 +11,34 @@ import Loader from '../components/ui/Loader'
 import Alert from '../components/ui/Alert'
 import WorkspaceTabs from '../components/workspace/WorkspaceTabs'
 import { fetchTasks, updateTaskStatus } from '../store/slices/tasksSlice'
+import { getWorkspaceMembers } from '../services/workspaceService'
 import { getSocket } from '../services/socket'
 import { KANBAN_COLUMNS } from '../utils/constants'
+import {
+  canCreateTask,
+  canUpdateTaskStatus,
+  getMyWorkspaceRole,
+} from '../utils/permissions'
 
 function WorkspaceKanban() {
   const { workspaceId } = useParams()
   const dispatch = useDispatch()
+  const { user } = useSelector((s) => s.auth)
   const { items: tasks, loading, error } = useSelector((s) => s.tasks)
   const [modalOpen, setModalOpen] = useState(false)
   const [activeTask, setActiveTask] = useState(null)
   const [statusError, setStatusError] = useState('')
+  const [myRole, setMyRole] = useState(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   useEffect(() => {
     dispatch(fetchTasks({ workspaceId }))
     getSocket()?.emit('join:workspace', workspaceId)
-  }, [dispatch, workspaceId])
+    getWorkspaceMembers(workspaceId)
+      .then((members) => setMyRole(getMyWorkspaceRole(members, user?.id)))
+      .catch(() => setMyRole(null))
+  }, [dispatch, workspaceId, user?.id])
 
   const columns = useMemo(() =>
     KANBAN_COLUMNS.map((col) => ({
@@ -35,12 +46,18 @@ function WorkspaceKanban() {
       tasks: tasks.filter((t) => t.status === col.id),
     })), [tasks])
 
+  const canDragTask = (task) => canUpdateTaskStatus(myRole, task, user?.id)
+
   const handleDragEnd = async (event) => {
     setActiveTask(null)
     const { active, over } = event
     if (!over) return
     const task = active.data.current?.task
     if (!task) return
+    if (!canUpdateTaskStatus(myRole, task, user?.id)) {
+      setStatusError('You can only update status on tasks assigned to you')
+      return
+    }
     let newStatus = over.id
     if (!KANBAN_COLUMNS.find((c) => c.id === newStatus)) {
       newStatus = over.data.current?.task?.status
@@ -65,11 +82,17 @@ function WorkspaceKanban() {
           icon={<Columns3 size={24} />}
           iconColor="#7C3AED"
           title="Kanban Board"
-          subtitle="Drag and drop tasks to update their status"
+          subtitle={
+            canCreateTask(myRole)
+              ? 'Drag and drop tasks to update their status'
+              : 'View and update status on tasks assigned to you'
+          }
           actions={
-            <button type="button" onClick={() => setModalOpen(true)} className="btn-primary">
-              <Plus size={16} /> Add Task
-            </button>
+            canCreateTask(myRole) ? (
+              <button type="button" onClick={() => setModalOpen(true)} className="btn-primary">
+                <Plus size={16} /> Add Task
+              </button>
+            ) : null
           }
         />
 
@@ -83,7 +106,7 @@ function WorkspaceKanban() {
           <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={(e) => setActiveTask(e.active.data.current?.task)} onDragEnd={handleDragEnd}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pb-8">
               {columns.map((col) => (
-                <KanbanColumn key={col.id} column={col} tasks={col.tasks} />
+                <KanbanColumn key={col.id} column={col} tasks={col.tasks} canDragTask={canDragTask} />
               ))}
             </div>
             <DragOverlay>
@@ -94,7 +117,9 @@ function WorkspaceKanban() {
           </DndContext>
         )}
 
-        <TaskFormModal isOpen={modalOpen} onClose={() => setModalOpen(false)} workspaceId={workspaceId} onSuccess={() => dispatch(fetchTasks({ workspaceId }))} />
+        {canCreateTask(myRole) && (
+          <TaskFormModal isOpen={modalOpen} onClose={() => setModalOpen(false)} workspaceId={workspaceId} onSuccess={() => dispatch(fetchTasks({ workspaceId }))} />
+        )}
       </div>
     </Layout>
   )

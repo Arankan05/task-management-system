@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getApiErrorMessage, isForbiddenError } from '../utils/apiErrors'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
@@ -33,6 +34,12 @@ export function setupApiInterceptors(store) {
       const status = error.response?.status
       const requestUrl = originalRequest?.url || ''
 
+      error.message = getApiErrorMessage(error)
+
+      if (isForbiddenError(error)) {
+        return Promise.reject(error)
+      }
+
       if (
         status !== 401
         || !originalRequest
@@ -48,6 +55,8 @@ export function setupApiInterceptors(store) {
         await refreshSession()
         return api(originalRequest)
       } catch (refreshError) {
+        refreshError.message = getApiErrorMessage(refreshError, 'Session expired')
+
         if (storeRef) {
           storeRef.dispatch({ type: 'auth/logout' })
         }
