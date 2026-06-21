@@ -53,6 +53,7 @@ const authSlice = createSlice({
   initialState: {
     user: null,
     isAuthenticated: false,
+    mustResetPassword: false,
     loading: false,
     error: null,
     initialized: false,
@@ -61,6 +62,7 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null
       state.isAuthenticated = false
+      state.mustResetPassword = false
       state.error = null
     },
     clearAuthError: (state) => {
@@ -80,6 +82,7 @@ const authSlice = createSlice({
         state.loading = false
         state.user = action.payload.user
         state.isAuthenticated = true
+        state.mustResetPassword = !!action.payload.mustResetPassword
         state.initialized = true
       })
       .addCase(loginUser.rejected, (state, action) => {
@@ -89,11 +92,13 @@ const authSlice = createSlice({
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null
         state.isAuthenticated = false
+        state.mustResetPassword = false
         state.error = null
       })
       .addCase(logoutUser.rejected, (state) => {
         state.user = null
         state.isAuthenticated = false
+        state.mustResetPassword = false
         state.error = null
       })
       .addCase(fetchProfile.pending, (state) => {
@@ -103,6 +108,7 @@ const authSlice = createSlice({
         state.loading = false
         state.user = action.payload
         state.isAuthenticated = true
+        state.mustResetPassword = !!action.payload.mustResetPassword
         state.initialized = true
       })
       .addCase(fetchProfile.rejected, (state) => {
