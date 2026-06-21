@@ -22,6 +22,7 @@ import {
   TASK_STATUSES, TASK_PRIORITIES, STATUS_LABELS, PRIORITY_LABELS,
   WORKSPACE_ROLES, WORKSPACE_ROLE_LABELS,
 } from '../utils/constants'
+import { canManageTeam, canManageProjectsAndTasks, getMyWorkspaceRole } from '../utils/permissions'
 
 const TABS = ['analyze', 'tasks', 'team']
 
@@ -49,12 +50,12 @@ function WorkspaceDetail() {
   const [stats, setStats] = useState(null)
   const [statsLoading, setStatsLoading] = useState(false)
 
-  const myMembership = members.find((m) => m.userId === user?.id)
-  const myRole = myMembership?.role === 'OWNER' ? WORKSPACE_ROLES.ADMINISTRATOR : myMembership?.role
-  const canManageTeam = myRole === WORKSPACE_ROLES.ADMINISTRATOR
+  const myRole = getMyWorkspaceRole(members, user?.id)
+  const canManageTeamMembers = canManageTeam(myRole)
+  const canManageTasks = canManageProjectsAndTasks(myRole)
 
   const loadInvitations = async () => {
-    if (!canManageTeam) return
+    if (!canManageTeamMembers) return
     try {
       const list = await getWorkspaceInvitations(workspaceId)
       setInvitations(list)
@@ -107,10 +108,10 @@ function WorkspaceDetail() {
   }, [tab, workspaceId])
 
   useEffect(() => {
-    if (tab === 'team' && canManageTeam) {
+    if (tab === 'team' && canManageTeamMembers) {
       loadInvitations()
     }
-  }, [tab, workspaceId, canManageTeam])
+  }, [tab, workspaceId, canManageTeamMembers])
 
   const handleInvitationSent = () => {
     setLocalSuccess('Invitation sent successfully')
@@ -183,12 +184,12 @@ function WorkspaceDetail() {
           subtitle={`${members.length} team member${members.length !== 1 ? 's' : ''} · Manage tasks, analytics, and collaboration`}
           actions={
             <>
-              {tab === 'tasks' && (
+              {tab === 'tasks' && canManageTasks && (
                 <button type="button" onClick={() => setTaskModal(true)} className="btn-primary">
                   <Plus size={16} /> New Task
                 </button>
               )}
-              {tab === 'team' && canManageTeam && (
+              {tab === 'team' && canManageTeamMembers && (
                 <button type="button" onClick={() => setMemberModal(true)} className="btn-primary">
                   <UserPlus size={16} /> Invite Member
                 </button>
@@ -271,7 +272,7 @@ function WorkspaceDetail() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {canManageTeam && member.userId !== workspace?.ownerId ? (
+                      {canManageTeamMembers && member.userId !== workspace?.ownerId ? (
                         <select
                           value={role}
                           onChange={(e) => handleRoleChange(member.userId, e.target.value)}
@@ -286,7 +287,7 @@ function WorkspaceDetail() {
                           {WORKSPACE_ROLE_LABELS[role] || role}
                         </span>
                       )}
-                      {canManageTeam && member.userId !== workspace?.ownerId && member.userId !== user?.id && (
+                      {canManageTeamMembers && member.userId !== workspace?.ownerId && member.userId !== user?.id && (
                         <button type="button" onClick={() => handleRemoveMember(member.userId)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors" aria-label="Remove member">
                           <Trash2 size={16} />
                         </button>
@@ -299,7 +300,7 @@ function WorkspaceDetail() {
           </div>
         )}
 
-        {tab === 'team' && canManageTeam && (
+        {tab === 'team' && canManageTeamMembers && (
           <PendingInvitationsList
             invitations={invitations}
             onResend={handleResendInvitation}
