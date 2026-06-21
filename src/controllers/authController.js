@@ -13,6 +13,7 @@ const {
   rotateRefreshToken,
 } = require("../services/authTokenService");
 const { sendPasswordResetOtp, OTP_EXPIRY_MINUTES } = require("../services/emailService");
+const { validatePassword } = require("../utils/passwordPolicy");
 
 const OTP_MAX_REQUESTS = 3;
 const OTP_WINDOW_MS = 60 * 60 * 1000;
@@ -36,6 +37,8 @@ const USER_SELECT = {
     name: true,
     email: true,
     role: true,
+    isActive: true,
+    mustResetPassword: true,
     profilePhoto: true,
     contactNumber: true,
     address: true,
@@ -91,6 +94,10 @@ const loginUser = async (req, res) => {
             return errorResponse(res, "Invalid credentials", 400);
         }
 
+        if (!user.isActive) {
+            return errorResponse(res, "Account deactivated", 403, "Your account has been deactivated. Contact an administrator.");
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
@@ -104,7 +111,10 @@ const loginUser = async (req, res) => {
 
         setAuthCookies(res, accessToken, refreshToken);
 
-        return successResponse(res, "Login successful", { user: safeUser });
+        return successResponse(res, "Login successful", {
+            user: safeUser,
+            mustResetPassword: user.mustResetPassword,
+        });
     } catch (error) {
         console.error(error);
         return errorResponse(res, "Server Error", 500);
@@ -334,12 +344,13 @@ const resetPassword = async (req, res) => {
             return errorResponse(res, "Reset token is required", 400);
         }
 
-        if (!newPassword || newPassword.length < 6) {
-            return errorResponse(
-                res,
-                "Password must be at least 6 characters",
-                400
-            );
+        if (!newPassword) {
+            return errorResponse(res, "New password is required", 400);
+        }
+
+        const passwordCheck = validatePassword(newPassword);
+        if (!passwordCheck.valid) {
+            return errorResponse(res, passwordCheck.message, 400);
         }
 
         let decoded;
@@ -367,6 +378,7 @@ const resetPassword = async (req, res) => {
             where: { id: user.id },
             data: {
                 password: hashedPassword,
+                mustResetPassword: false,
                 ...clearResetOtp,
             },
         });
@@ -375,6 +387,50 @@ const resetPassword = async (req, res) => {
             res,
             "Password reset successfully. You can now sign in."
         );
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+const forceResetPassword = async (req, res) => {
+    try {
+        const { newPassword, confirmPassword } = req.body;
+
+        if (!newPassword || !confirmPassword) {
+            return errorResponse(res, "New password and confirmation are required", 400);
+        }
+
+        if (newPassword !== confirmPassword) {
+            return errorResponse(res, "Passwords do not match", 400);
+        }
+
+        const passwordCheck = validatePassword(newPassword);
+        if (!passwordCheck.valid) {
+            return errorResponse(res, passwordCheck.message, 400);
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        if (!user) {
+            return errorResponse(res, "User not found", 404);
+        }
+
+        if (!user.mustResetPassword) {
+            return errorResponse(res, "Password reset is not required for this account", 400);
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        const updated = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                mustResetPassword: false,
+            },
+            select: USER_SELECT,
+        });
+
+        return successResponse(res, "Password updated successfully", updated);
     } catch (error) {
         console.error(error);
         return errorResponse(res, "Server Error", 500);
@@ -391,4 +447,5 @@ module.exports = {
     forgotPassword,
     verifyResetOtp,
     resetPassword,
+    forceResetPassword,
 };

@@ -12,6 +12,8 @@ model User {
   email               String            @unique
   password            String
   role                String            @default("COLLABORATOR")
+  isActive            Boolean           @default(true)
+  mustResetPassword   Boolean           @default(false)
   profilePhoto        String?           @db.Text
   contactNumber       String?
   address             String?           @db.Text
@@ -22,6 +24,7 @@ model User {
   resetOtpSendCount   Int               @default(0)
   resetOtpWindowStart DateTime?
   createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
   ownedWorkspaces     Workspace[]           @relation("WorkspaceOwner")
   workspaceMembers    WorkspaceMember[]
