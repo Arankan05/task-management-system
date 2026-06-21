@@ -1,19 +1,32 @@
 const taskService = require("../services/taskService");
-const { canAccessProject, canAccessTask } = require("../services/accessService");
+const {
+  canAccessProject,
+  canAccessTask,
+  resolveTaskAccess,
+  assertCanManageTasks,
+  getWorkspaceRole,
+  getTaskListFiltersForRole,
+} = require("../services/accessService");
 const { successResponse, errorResponse } = require("../utils/response");
 
 const emitProjectUsers = (io, projectId, event, payload) => {
   io.to(`project:${projectId}`).emit(event, payload);
 };
 
+const denyTaskAccess = (res, access) => {
+  if (!access.task) return errorResponse(res, access.message || "Task not found", 404);
+  return errorResponse(res, access.message || "Access denied", 403);
+};
+
 const listTasks = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { allowed } = await canAccessProject(req.user.id, projectId);
+    const { allowed, project, role } = await canAccessProject(req.user.id, projectId);
+    if (!project) return errorResponse(res, "Project not found", 404);
     if (!allowed) return errorResponse(res, "Access denied", 403);
 
     const { status, priority, assignedToId, search, sort, labelId } = req.query;
-    const tasks = await taskService.getTasksByProject(projectId, {
+    const filters = getTaskListFiltersForRole(role, req.user.id, {
       status,
       priority,
       assignedToId,
@@ -21,6 +34,7 @@ const listTasks = async (req, res) => {
       sort,
       labelId,
     });
+    const tasks = await taskService.getTasksByProject(projectId, filters);
     return successResponse(res, "Tasks fetched", tasks);
   } catch (error) {
     console.error(error);
@@ -31,8 +45,12 @@ const listTasks = async (req, res) => {
 const createTask = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { allowed } = await canAccessProject(req.user.id, projectId);
+    const { allowed, project } = await canAccessProject(req.user.id, projectId);
+    if (!project) return errorResponse(res, "Project not found", 404);
     if (!allowed) return errorResponse(res, "Access denied", 403);
+
+    const permission = await assertCanManageTasks(req.user.id, project.workspaceId);
+    if (!permission.ok) return errorResponse(res, permission.message, 403);
 
     const { title, description, status, priority, progress, dueDate, assignedToId } = req.body;
     if (!title?.trim()) return errorResponse(res, "Title is required", 400);
@@ -61,9 +79,8 @@ const createTask = async (req, res) => {
 
 const getTask = async (req, res) => {
   try {
-    const { allowed, task } = await canAccessTask(req.user.id, req.params.id);
-    if (!task) return errorResponse(res, "Task not found", 404);
-    if (!allowed) return errorResponse(res, "Access denied", 403);
+    const access = await resolveTaskAccess(req.user.id, req.params.id);
+    if (!access.allowed) return denyTaskAccess(res, access);
 
     const fullTask = await taskService.getTaskById(req.params.id);
     return successResponse(res, "Task fetched", fullTask);
@@ -75,13 +92,15 @@ const getTask = async (req, res) => {
 
 const updateTask = async (req, res) => {
   try {
-    const { allowed, task } = await canAccessTask(req.user.id, req.params.id);
-    if (!task) return errorResponse(res, "Task not found", 404);
-    if (!allowed) return errorResponse(res, "Access denied", 403);
+    const access = await resolveTaskAccess(req.user.id, req.params.id);
+    if (!access.allowed) return denyTaskAccess(res, access);
+    if (!access.canManage) {
+      return errorResponse(res, "Collaborators cannot modify task details", 403);
+    }
 
     const updated = await taskService.updateTask(req.params.id, req.body);
     const io = req.app.get("io");
-    emitProjectUsers(io, task.projectId, "task:updated", { task: updated });
+    emitProjectUsers(io, access.task.projectId, "task:updated", { task: updated });
 
     return successResponse(res, "Task updated", updated);
   } catch (error) {
@@ -98,15 +117,22 @@ const updateTaskStatus = async (req, res) => {
       return errorResponse(res, "Invalid status", 400);
     }
 
-    const { allowed, task } = await canAccessTask(req.user.id, req.params.id);
-    if (!task) return errorResponse(res, "Task not found", 404);
-    if (!allowed) return errorResponse(res, "Access denied", 403);
+    const access = await resolveTaskAccess(req.user.id, req.params.id);
+    if (!access.allowed) return denyTaskAccess(res, access);
+    if (!access.canManage && !access.canInteract) {
+      return errorResponse(res, "Collaborators can only update status on tasks assigned to them", 403);
+    }
 
-    const progress = status === "DONE" ? 100 : status === "IN_PROGRESS" ? Math.max(task.progress, 25) : task.progress;
+    const progress =
+      status === "DONE"
+        ? 100
+        : status === "IN_PROGRESS"
+          ? Math.max(access.task.progress, 25)
+          : access.task.progress;
     const updated = await taskService.updateTask(req.params.id, { status, progress });
 
     const io = req.app.get("io");
-    emitProjectUsers(io, task.projectId, "task:updated", { task: updated });
+    emitProjectUsers(io, access.task.projectId, "task:updated", { task: updated });
 
     return successResponse(res, "Status updated", updated);
   } catch (error) {
@@ -117,13 +143,15 @@ const updateTaskStatus = async (req, res) => {
 
 const deleteTask = async (req, res) => {
   try {
-    const { allowed, task } = await canAccessTask(req.user.id, req.params.id);
-    if (!task) return errorResponse(res, "Task not found", 404);
-    if (!allowed) return errorResponse(res, "Access denied", 403);
+    const access = await resolveTaskAccess(req.user.id, req.params.id);
+    if (!access.allowed) return denyTaskAccess(res, access);
+    if (!access.canManage) {
+      return errorResponse(res, "Collaborators cannot delete tasks", 403);
+    }
 
     await taskService.deleteTask(req.params.id);
     const io = req.app.get("io");
-    emitProjectUsers(io, task.projectId, "task:deleted", { taskId: req.params.id });
+    emitProjectUsers(io, access.task.projectId, "task:deleted", { taskId: req.params.id });
 
     return successResponse(res, "Task deleted");
   } catch (error) {
@@ -135,7 +163,8 @@ const deleteTask = async (req, res) => {
 const listLabels = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { allowed } = await canAccessProject(req.user.id, projectId);
+    const { allowed, project } = await canAccessProject(req.user.id, projectId);
+    if (!project) return errorResponse(res, "Project not found", 404);
     if (!allowed) return errorResponse(res, "Access denied", 403);
 
     const labels = await taskService.getLabelsByProject(projectId);
@@ -149,8 +178,12 @@ const listLabels = async (req, res) => {
 const createLabel = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { allowed } = await canAccessProject(req.user.id, projectId);
+    const { allowed, project } = await canAccessProject(req.user.id, projectId);
+    if (!project) return errorResponse(res, "Project not found", 404);
     if (!allowed) return errorResponse(res, "Access denied", 403);
+
+    const permission = await assertCanManageTasks(req.user.id, project.workspaceId);
+    if (!permission.ok) return errorResponse(res, permission.message, 403);
     if (!req.body.name?.trim()) return errorResponse(res, "Label name is required", 400);
 
     const label = await taskService.createLabel(projectId, req.body);
@@ -163,9 +196,11 @@ const createLabel = async (req, res) => {
 
 const addTaskLabel = async (req, res) => {
   try {
-    const { allowed, task } = await canAccessTask(req.user.id, req.params.taskId);
-    if (!task) return errorResponse(res, "Task not found", 404);
-    if (!allowed) return errorResponse(res, "Access denied", 403);
+    const access = await resolveTaskAccess(req.user.id, req.params.taskId);
+    if (!access.allowed) return denyTaskAccess(res, access);
+    if (!access.canManage) {
+      return errorResponse(res, "Collaborators cannot modify task labels", 403);
+    }
 
     await taskService.addLabelToTask(req.params.taskId, req.params.labelId);
     const updated = await taskService.getTaskById(req.params.taskId);
@@ -178,9 +213,11 @@ const addTaskLabel = async (req, res) => {
 
 const removeTaskLabel = async (req, res) => {
   try {
-    const { allowed, task } = await canAccessTask(req.user.id, req.params.taskId);
-    if (!task) return errorResponse(res, "Task not found", 404);
-    if (!allowed) return errorResponse(res, "Access denied", 403);
+    const access = await resolveTaskAccess(req.user.id, req.params.taskId);
+    if (!access.allowed) return denyTaskAccess(res, access);
+    if (!access.canManage) {
+      return errorResponse(res, "Collaborators cannot modify task labels", 403);
+    }
 
     await taskService.removeLabelFromTask(req.params.taskId, req.params.labelId);
     const updated = await taskService.getTaskById(req.params.taskId);
@@ -193,9 +230,11 @@ const removeTaskLabel = async (req, res) => {
 
 const addComment = async (req, res) => {
   try {
-    const { allowed, task } = await canAccessTask(req.user.id, req.params.taskId);
-    if (!task) return errorResponse(res, "Task not found", 404);
-    if (!allowed) return errorResponse(res, "Access denied", 403);
+    const access = await resolveTaskAccess(req.user.id, req.params.taskId);
+    if (!access.allowed) return denyTaskAccess(res, access);
+    if (!access.canManage && !access.canInteract) {
+      return errorResponse(res, "Collaborators can only comment on tasks assigned to them", 403);
+    }
     if (!req.body.content?.trim()) return errorResponse(res, "Comment is required", 400);
 
     const comment = await taskService.addComment(req.params.taskId, req.user.id, req.body.content);
@@ -211,9 +250,11 @@ const addComment = async (req, res) => {
 
 const addAttachment = async (req, res) => {
   try {
-    const { allowed, task } = await canAccessTask(req.user.id, req.params.taskId);
-    if (!task) return errorResponse(res, "Task not found", 404);
-    if (!allowed) return errorResponse(res, "Access denied", 403);
+    const access = await resolveTaskAccess(req.user.id, req.params.taskId);
+    if (!access.allowed) return denyTaskAccess(res, access);
+    if (!access.canManage && !access.canInteract) {
+      return errorResponse(res, "Collaborators can only add attachments to tasks assigned to them", 403);
+    }
     if (!req.body.fileName || !req.body.fileUrl) {
       return errorResponse(res, "File name and URL are required", 400);
     }

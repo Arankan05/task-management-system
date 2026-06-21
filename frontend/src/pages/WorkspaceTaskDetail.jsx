@@ -9,24 +9,40 @@ import Alert from '../components/ui/Alert'
 import TaskFormModal from '../components/tasks/TaskFormModal'
 import { fetchTaskById, deleteTask, clearSelectedTask, addComment, updateTask } from '../store/slices/tasksSlice'
 import { addAttachment } from '../services/taskService'
+import { getWorkspaceMembers } from '../services/workspaceService'
 import { formatStatus, formatPriority, formatDate } from '../utils/taskHelpers'
+import {
+  canDeleteTask,
+  canEditTaskDetails,
+  canInteractWithTask,
+  getMyWorkspaceRole,
+} from '../utils/permissions'
 
 function WorkspaceTaskDetail() {
   const { workspaceId, taskId } = useParams()
   const navigate = useNavigate()
   const dispatch = useDispatch()
+  const { user } = useSelector((s) => s.auth)
   const { selected: task, loading, error } = useSelector((s) => s.tasks)
   const [editOpen, setEditOpen] = useState(false)
   const [comment, setComment] = useState('')
   const [commentLoading, setCommentLoading] = useState(false)
   const [localError, setLocalError] = useState('')
+  const [myRole, setMyRole] = useState(null)
 
   const base = `/workspaces/${workspaceId}`
 
   useEffect(() => {
     dispatch(fetchTaskById(taskId))
+    getWorkspaceMembers(workspaceId)
+      .then((members) => setMyRole(getMyWorkspaceRole(members, user?.id)))
+      .catch(() => setMyRole(null))
     return () => dispatch(clearSelectedTask())
-  }, [dispatch, taskId])
+  }, [dispatch, taskId, workspaceId, user?.id])
+
+  const canEdit = canEditTaskDetails(myRole)
+  const canDelete = canDeleteTask(myRole)
+  const canComment = task && canInteractWithTask(myRole, task, user?.id)
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this task?')) return
@@ -54,6 +70,7 @@ function WorkspaceTaskDetail() {
   }
 
   const handleProgress = async (progress) => {
+    if (!canEdit) return
     await dispatch(updateTask({ id: taskId, payload: { progress: Number(progress) } }))
   }
 
@@ -102,10 +119,16 @@ function WorkspaceTaskDetail() {
                 <Badge label={formatPriority(task.priority)} variant={task.priority} />
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => setEditOpen(true)} className="btn-secondary"><Edit size={16} /> Edit</button>
-              <button onClick={handleDelete} className="btn-danger"><Trash2 size={16} /> Delete</button>
-            </div>
+            {(canEdit || canDelete) && (
+              <div className="flex gap-2">
+                {canEdit && (
+                  <button onClick={() => setEditOpen(true)} className="btn-secondary"><Edit size={16} /> Edit</button>
+                )}
+                {canDelete && (
+                  <button onClick={handleDelete} className="btn-danger"><Trash2 size={16} /> Delete</button>
+                )}
+              </div>
+            )}
           </div>
 
           {task.description && (
@@ -115,10 +138,21 @@ function WorkspaceTaskDetail() {
             </div>
           )}
 
-          <div>
-            <label className="text-sm font-semibold text-theme mb-2 block">Progress: {task.progress}%</label>
-            <input type="range" min="0" max="100" value={task.progress} onChange={(e) => handleProgress(e.target.value)} className="w-full accent-primary" />
-          </div>
+          {canEdit && (
+            <div>
+              <label className="text-sm font-semibold text-theme mb-2 block">Progress: {task.progress}%</label>
+              <input type="range" min="0" max="100" value={task.progress} onChange={(e) => handleProgress(e.target.value)} className="w-full accent-primary" />
+            </div>
+          )}
+
+          {!canEdit && (
+            <div>
+              <p className="text-sm font-semibold text-theme mb-1">Progress: {task.progress}%</p>
+              <div className="h-2 rounded-full bg-theme-surface overflow-hidden">
+                <div className="h-full bg-primary" style={{ width: `${task.progress}%` }} />
+              </div>
+            </div>
+          )}
 
           {task.labels?.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -141,34 +175,40 @@ function WorkspaceTaskDetail() {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-theme">
-            <h3 className="text-sm font-semibold text-theme mb-3 flex items-center gap-2"><Paperclip size={16} /> Attachments</h3>
-            <input type="file" onChange={handleAttachment} className="text-sm mb-3" />
-            <div className="space-y-2">
-              {(task.attachments || []).map((a) => (
-                <a key={a.id} href={a.fileUrl} target="_blank" rel="noreferrer" className="block text-sm text-primary hover:underline">{a.fileName}</a>
-              ))}
+          {canComment && (
+            <div className="pt-4 border-t border-theme">
+              <h3 className="text-sm font-semibold text-theme mb-3 flex items-center gap-2"><Paperclip size={16} /> Attachments</h3>
+              <input type="file" onChange={handleAttachment} className="text-sm mb-3" />
+              <div className="space-y-2">
+                {(task.attachments || []).map((a) => (
+                  <a key={a.id} href={a.fileUrl} target="_blank" rel="noreferrer" className="block text-sm text-primary hover:underline">{a.fileName}</a>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="pt-4 border-t border-theme">
-            <h3 className="text-sm font-semibold text-theme mb-3 flex items-center gap-2"><MessageSquare size={16} /> Comments</h3>
-            <div className="space-y-3 mb-4">
-              {(task.comments || []).map((c) => (
-                <div key={c.id} className="p-3 rounded-xl bg-theme-surface">
-                  <p className="text-xs font-semibold text-theme">{c.user?.name}</p>
-                  <p className="text-sm text-theme-muted mt-1">{c.content}</p>
-                </div>
-              ))}
+          {canComment && (
+            <div className="pt-4 border-t border-theme">
+              <h3 className="text-sm font-semibold text-theme mb-3 flex items-center gap-2"><MessageSquare size={16} /> Comments</h3>
+              <div className="space-y-3 mb-4">
+                {(task.comments || []).map((c) => (
+                  <div key={c.id} className="p-3 rounded-xl bg-theme-surface">
+                    <p className="text-xs font-semibold text-theme">{c.user?.name}</p>
+                    <p className="text-sm text-theme-muted mt-1">{c.content}</p>
+                  </div>
+                ))}
+              </div>
+              <form onSubmit={handleComment} className="flex gap-2">
+                <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Add a comment..." className="input-field flex-1" />
+                <button type="submit" disabled={commentLoading} className="btn-primary shrink-0">{commentLoading ? '...' : 'Post'}</button>
+              </form>
             </div>
-            <form onSubmit={handleComment} className="flex gap-2">
-              <input className="input-field flex-1" placeholder="Add a comment..." value={comment} onChange={(e) => setComment(e.target.value)} />
-              <button type="submit" disabled={commentLoading} className="btn-primary">Post</button>
-            </form>
-          </div>
+          )}
         </div>
 
-        <TaskFormModal isOpen={editOpen} onClose={() => setEditOpen(false)} task={task} workspaceId={workspaceId} onSuccess={() => dispatch(fetchTaskById(taskId))} />
+        {canEdit && (
+          <TaskFormModal isOpen={editOpen} onClose={() => setEditOpen(false)} task={task} workspaceId={workspaceId} onSuccess={() => dispatch(fetchTaskById(taskId))} />
+        )}
       </div>
     </Layout>
   )

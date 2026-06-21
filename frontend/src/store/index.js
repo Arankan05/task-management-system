@@ -18,19 +18,13 @@ import filtersReducer from './slices/filtersSlice'
 import settingsReducer from './slices/settingsSlice'
 import { setupApiInterceptors } from '../services/api'
 
-const authPersistConfig = {
-  key: 'auth',
-  storage,
-  whitelist: ['user', 'token'],
-}
-
 const settingsPersistConfig = {
   key: 'settings',
   storage,
 }
 
 const rootReducer = combineReducers({
-  auth: persistReducer(authPersistConfig, authReducer),
+  auth: authReducer,
   workspaces: workspacesReducer,
   projects: projectsReducer,
   tasks: tasksReducer,

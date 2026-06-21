@@ -13,6 +13,17 @@ export const loginUser = createAsyncThunk(
   }
 )
 
+export const logoutUser = createAsyncThunk(
+  'auth/logout',
+  async (_, { rejectWithValue }) => {
+    try {
+      await api.post('/auth/logout')
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Logout failed')
+    }
+  }
+)
+
 export const fetchProfile = createAsyncThunk(
   'auth/fetchProfile',
   async (_, { rejectWithValue }) => {
@@ -41,19 +52,15 @@ const authSlice = createSlice({
   name: 'auth',
   initialState: {
     user: null,
-    token: null,
+    isAuthenticated: false,
     loading: false,
     error: null,
     initialized: false,
   },
   reducers: {
-    setCredentials: (state, action) => {
-      state.user = action.payload.user
-      state.token = action.payload.token
-    },
     logout: (state) => {
       state.user = null
-      state.token = null
+      state.isAuthenticated = false
       state.error = null
     },
     clearAuthError: (state) => {
@@ -72,18 +79,37 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false
         state.user = action.payload.user
-        state.token = action.payload.token
+        state.isAuthenticated = true
+        state.initialized = true
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
       })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.user = null
+        state.isAuthenticated = false
+        state.error = null
+      })
+      .addCase(logoutUser.rejected, (state) => {
+        state.user = null
+        state.isAuthenticated = false
+        state.error = null
+      })
+      .addCase(fetchProfile.pending, (state) => {
+        state.loading = true
+      })
       .addCase(fetchProfile.fulfilled, (state, action) => {
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload }
-        } else {
-          state.user = { ...action.payload }
-        }
+        state.loading = false
+        state.user = action.payload
+        state.isAuthenticated = true
+        state.initialized = true
+      })
+      .addCase(fetchProfile.rejected, (state) => {
+        state.loading = false
+        state.user = null
+        state.isAuthenticated = false
+        state.initialized = true
       })
       .addCase(updateProfile.pending, (state) => {
         state.loading = true
@@ -100,5 +126,5 @@ const authSlice = createSlice({
   },
 })
 
-export const { setCredentials, logout, clearAuthError, setInitialized } = authSlice.actions
+export const { logout, clearAuthError, setInitialized } = authSlice.actions
 export default authSlice.reducer

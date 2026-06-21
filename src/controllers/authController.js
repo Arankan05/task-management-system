@@ -3,6 +3,15 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const validator = require("validator");
 const { successResponse, errorResponse } = require("../utils/response");
+const { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest, getTokenFromRequest } = require("../utils/authCookie");
+const {
+  signAccessToken,
+  createRefreshToken,
+  verifyRefreshToken,
+  revokeRefreshToken,
+  revokeAllUserRefreshTokens,
+  rotateRefreshToken,
+} = require("../services/authTokenService");
 const { sendPasswordResetOtp, OTP_EXPIRY_MINUTES } = require("../services/emailService");
 
 const OTP_MAX_REQUESTS = 3;
@@ -88,30 +97,69 @@ const loginUser = async (req, res) => {
             return errorResponse(res, "Invalid credentials", 400);
         }
 
-        const token = jwt.sign(
-            {
-                id: user.id,
-                role: user.role,
-            },
-            process.env.JWT_SECRET,
-            {
-                expiresIn: "7d",
-            }
-        );
+        const accessToken = signAccessToken(user);
+        const refreshToken = await createRefreshToken(user.id);
 
         const { password: _, ...safeUser } = user;
 
-        return successResponse(
-            res,
-            "Login successful",
-            {
-                token,
-                user: safeUser,
-            }
-        );
+        setAuthCookies(res, accessToken, refreshToken);
+
+        return successResponse(res, "Login successful", { user: safeUser });
     } catch (error) {
         console.error(error);
         return errorResponse(res, "Server Error", 500);
+    }
+};
+
+const logoutUser = async (req, res) => {
+    const refreshToken = getRefreshTokenFromRequest(req);
+
+    if (refreshToken) {
+        await revokeRefreshToken(refreshToken);
+    } else {
+        const accessToken = getTokenFromRequest(req);
+        if (accessToken) {
+            try {
+                const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
+                if (decoded?.id) {
+                    await revokeAllUserRefreshTokens(decoded.id);
+                }
+            } catch {
+                // access token may be expired; cookies will still be cleared
+            }
+        }
+    }
+
+    clearAuthCookies(res);
+    return successResponse(res, "Logged out successfully");
+};
+
+const refreshAccessToken = async (req, res) => {
+    try {
+        const refreshToken = getRefreshTokenFromRequest(req);
+
+        if (!refreshToken) {
+            clearAuthCookies(res);
+            return errorResponse(res, "Refresh token required", 401);
+        }
+
+        const record = await verifyRefreshToken(refreshToken);
+
+        if (!record?.user) {
+            clearAuthCookies(res);
+            return errorResponse(res, "Invalid or expired refresh token", 401);
+        }
+
+        const accessToken = signAccessToken(record.user);
+        const newRefreshToken = await rotateRefreshToken(refreshToken, record.userId);
+
+        setAuthCookies(res, accessToken, newRefreshToken);
+
+        return successResponse(res, "Token refreshed successfully");
+    } catch (error) {
+        console.error(error);
+        clearAuthCookies(res);
+        return errorResponse(res, "Failed to refresh token", 500);
     }
 };
 
@@ -336,6 +384,8 @@ const resetPassword = async (req, res) => {
 module.exports = {
     registerUser,
     loginUser,
+    logoutUser,
+    refreshAccessToken,
     getProfile,
     updateProfile,
     forgotPassword,

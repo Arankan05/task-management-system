@@ -1,10 +1,19 @@
 import { Navigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
+import Loader from './ui/Loader'
 
 function ProtectedRoute({ children }) {
-  const token = useSelector((state) => state.auth?.token)
+  const { isAuthenticated, initialized } = useSelector((state) => state.auth)
 
-  if (!token) {
+  if (!initialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-muted">
+        <Loader />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
