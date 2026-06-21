@@ -19,10 +19,12 @@ import InvitationSuccess from './pages/InvitationSuccess'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function PublicRoute({ children }) {
-  const token = useSelector((state) => state.auth?.token)
+  const { isAuthenticated, initialized } = useSelector((state) => state.auth)
   const params = new URLSearchParams(window.location.search)
   const redirect = params.get('redirect')
-  if (token) return <Navigate to={redirect || '/workspaces'} replace />
+  if (initialized && isAuthenticated) {
+    return <Navigate to={redirect || '/workspaces'} replace />
+  }
   return children
 }
 

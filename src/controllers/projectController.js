@@ -1,5 +1,9 @@
 const projectService = require("../services/projectService");
-const { isWorkspaceMember, canAccessProject } = require("../services/accessService");
+const {
+  isWorkspaceMember,
+  canAccessProject,
+  assertCanManageTasks,
+} = require("../services/accessService");
 const { successResponse, errorResponse } = require("../utils/response");
 
 const listProjects = async (req, res) => {
@@ -20,10 +24,10 @@ const listProjects = async (req, res) => {
 const createProject = async (req, res) => {
   try {
     const { workspaceId } = req.params;
+    const permission = await assertCanManageTasks(req.user.id, workspaceId);
+    if (!permission.ok) return errorResponse(res, permission.message, 403);
+
     const { name, description, color } = req.body;
-    if (!(await isWorkspaceMember(req.user.id, workspaceId))) {
-      return errorResponse(res, "Access denied", 403);
-    }
     if (!name?.trim()) return errorResponse(res, "Project name is required", 400);
 
     const project = await projectService.createProject({
@@ -58,6 +62,9 @@ const updateProject = async (req, res) => {
     if (!project) return errorResponse(res, "Project not found", 404);
     if (!allowed) return errorResponse(res, "Access denied", 403);
 
+    const permission = await assertCanManageTasks(req.user.id, project.workspaceId);
+    if (!permission.ok) return errorResponse(res, permission.message, 403);
+
     const updated = await projectService.updateProject(req.params.id, req.body);
     return successResponse(res, "Project updated", updated);
   } catch (error) {
@@ -71,6 +78,9 @@ const deleteProject = async (req, res) => {
     const { allowed, project } = await canAccessProject(req.user.id, req.params.id);
     if (!project) return errorResponse(res, "Project not found", 404);
     if (!allowed) return errorResponse(res, "Access denied", 403);
+
+    const permission = await assertCanManageTasks(req.user.id, project.workspaceId);
+    if (!permission.ok) return errorResponse(res, permission.message, 403);
 
     await projectService.deleteProject(req.params.id);
     return successResponse(res, "Project deleted");
