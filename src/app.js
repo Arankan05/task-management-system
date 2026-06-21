@@ -19,7 +19,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL || "http://localhost:3000",
+        origin: ["http://localhost:3000", "http://localhost:5173"],
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
         credentials: true,
     },
@@ -32,7 +32,7 @@ app.set("io", io);
 
 //CORS configuration
 app.use(cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: ["http://localhost:3000", "http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "PATHCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
