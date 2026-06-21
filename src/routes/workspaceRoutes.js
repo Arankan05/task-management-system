@@ -1,15 +1,26 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/authMiddleware");
+const ensurePasswordChanged = require("../middleware/ensurePasswordChanged");
+const requireWorkspaceAdmin = require("../middleware/requireWorkspaceAdmin");
+const validateAdminUser = require("../middleware/validateAdminUser");
 const ctrl = require("../controllers/workspaceController");
+const userCtrl = require("../controllers/userController");
 
 router.use(auth);
+router.use(ensurePasswordChanged);
 
 router.get("/", ctrl.listWorkspaces);
 router.post("/", ctrl.createWorkspace);
 router.get("/:id", ctrl.getWorkspace);
 router.put("/:id", ctrl.updateWorkspace);
 router.delete("/:id", ctrl.deleteWorkspace);
+
+router.get("/:id/users", requireWorkspaceAdmin, userCtrl.listUsers);
+router.post("/:id/users", requireWorkspaceAdmin, validateAdminUser, userCtrl.createUser);
+router.patch("/:id/users/:userId", requireWorkspaceAdmin, userCtrl.updateUser);
+router.patch("/:id/users/:userId/deactivate", requireWorkspaceAdmin, userCtrl.deactivateUser);
+router.patch("/:id/users/:userId/activate", requireWorkspaceAdmin, userCtrl.activateUser);
 
 router.get("/:id/members", ctrl.listMembers);
 router.post("/:id/members", ctrl.addMember);

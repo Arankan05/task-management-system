@@ -5,6 +5,7 @@ import Alert from '../../components/ui/Alert'
 import Footer from '../../components/Footer'
 import BrandLogo from '../../components/BrandLogo'
 import { Lock, ArrowLeft, CheckCircle } from 'lucide-react'
+import { PASSWORD_REQUIREMENTS, validatePasswordClient } from '../../utils/passwordPolicy'
 
 function ResetPassword() {
   const navigate = useNavigate()
@@ -29,7 +30,8 @@ function ResetPassword() {
     setSuccess('')
 
     if (!password) return setError('Password is required')
-    if (password.length < 6) return setError('Password must be at least 6 characters')
+    const passwordCheck = validatePasswordClient(password)
+    if (!passwordCheck.valid) return setError(passwordCheck.message)
     if (password !== confirmPassword) return setError('Passwords do not match')
 
     setLoading(true)
@@ -59,7 +61,7 @@ function ResetPassword() {
               Create a new<br />password
             </h1>
             <p className="text-brand-100 text-lg max-w-md">
-              Choose a strong password with at least 6 characters.
+              {PASSWORD_REQUIREMENTS}
             </p>
           </div>
           <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-white/5" />
@@ -88,6 +90,7 @@ function ResetPassword() {
                       required
                     />
                   </div>
+                  <p className="text-xs text-slate-500 mt-1">{PASSWORD_REQUIREMENTS}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm password</label>

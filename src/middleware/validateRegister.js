@@ -1,5 +1,6 @@
 const validator = require("validator");
 const { errorResponse } = require("../utils/response");
+const { validatePassword } = require("../utils/passwordPolicy");
 
 const validateRegister = (req, res, next) => {
     const { name, email, password } = req.body;
@@ -12,8 +13,9 @@ const validateRegister = (req, res, next) => {
         return errorResponse(res, "Invalid email address", 400);
     }
 
-    if (!password || !validator.isLength(password, { min: 6 })) {
-        return errorResponse(res, "Password must be at least 6 characters long", 400);
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.valid) {
+        return errorResponse(res, passwordCheck.message, 400);
     }
 
     next();

@@ -1,10 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/authMiddleware");
+const ensurePasswordChanged = require("../middleware/ensurePasswordChanged");
 const projectCtrl = require("../controllers/projectController");
 const taskCtrl = require("../controllers/taskController");
 
 router.use(auth);
+router.use(ensurePasswordChanged);
 
 router.get("/:id", projectCtrl.getProject);
 router.put("/:id", projectCtrl.updateProject);

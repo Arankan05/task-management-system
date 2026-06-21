@@ -11,6 +11,7 @@ const {
     forgotPassword,
     verifyResetOtp,
     resetPassword,
+    forceResetPassword,
 } = require("../controllers/authController");
 
 const authMiddleware = require("../middleware/authMiddleware");
@@ -76,6 +77,7 @@ router.post("/logout", logoutUser);
 router.post("/forgot-password", forgotPassword);
 router.post("/verify-reset-otp", verifyResetOtp);
 router.post("/reset-password", resetPassword);
+router.post("/force-reset-password", authMiddleware, forceResetPassword);
 
 router.get("/profile", authMiddleware, getProfile);
 

@@ -1,9 +1,10 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import Loader from './ui/Loader'
 
 function ProtectedRoute({ children }) {
-  const { isAuthenticated, initialized } = useSelector((state) => state.auth)
+  const location = useLocation()
+  const { isAuthenticated, initialized, mustResetPassword } = useSelector((state) => state.auth)
 
   if (!initialized) {
     return (
@@ -15,6 +16,10 @@ function ProtectedRoute({ children }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+
+  if (mustResetPassword && location.pathname !== '/mandatory-reset') {
+    return <Navigate to="/mandatory-reset" replace />
   }
 
   return children

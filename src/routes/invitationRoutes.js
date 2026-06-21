@@ -1,16 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/authMiddleware");
+const ensurePasswordChanged = require("../middleware/ensurePasswordChanged");
 const ctrl = require("../controllers/invitationController");
 
-router.get("/workspace/:workspaceId", auth, ctrl.listByWorkspace);
+const protectedRoute = [auth, ensurePasswordChanged];
 
-router.post("/", auth, ctrl.createInvitation);
-
-router.post("/:id/resend", auth, ctrl.resendInvitation);
-router.delete("/:id/cancel", auth, ctrl.cancelInvitation);
+router.get("/workspace/:workspaceId", protectedRoute, ctrl.listByWorkspace);
+router.post("/", protectedRoute, ctrl.createInvitation);
+router.post("/:id/resend", protectedRoute, ctrl.resendInvitation);
+router.delete("/:id/cancel", protectedRoute, ctrl.cancelInvitation);
+router.post("/:token/accept", protectedRoute, ctrl.acceptInvitation);
 
 router.get("/:token", ctrl.getByToken);
-router.post("/:token/accept", auth, ctrl.acceptInvitation);
 
 module.exports = router;
