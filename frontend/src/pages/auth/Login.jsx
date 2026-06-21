@@ -1,15 +1,24 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { loginUser, clearAuthError } from '../../store/slices/authSlice'
 import Alert from '../../components/ui/Alert'
+import Footer from '../../components/Footer'
+import BrandLogo, { APP_NAME } from '../../components/BrandLogo'
 import { LogIn, Mail, Lock } from 'lucide-react'
 
 function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || '/workspaces'
   const dispatch = useDispatch()
   const { loading, error } = useSelector((state) => state.auth ?? {})
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(searchParams.get('email') || '')
+
+  useEffect(() => {
+    const prefill = searchParams.get('email')
+    if (prefill) setEmail(prefill)
+  }, [searchParams])
   const [password, setPassword] = useState('')
   const [validationError, setValidationError] = useState('')
 
@@ -24,7 +33,7 @@ function Login() {
 
     try {
       await dispatch(loginUser({ email, password })).unwrap()
-      navigate('/dashboard')
+      navigate(redirectTo)
     } catch {
       // error handled in slice
     }
@@ -33,20 +42,16 @@ function Login() {
   const displayError = validationError || error
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex flex-1">
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 p-12 flex-col justify-between relative overflow-hidden">
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <span className="text-white font-bold">TF</span>
-            </div>
-            <span className="text-white text-xl font-bold">TaskFlow</span>
-          </div>
+          <BrandLogo size="lg" lightText className="mb-8" />
           <h1 className="text-4xl font-bold text-white leading-tight mb-4">
             Manage tasks<br />with clarity.
           </h1>
           <p className="text-brand-100 text-lg max-w-md">
-            A modern workspace for teams to plan, track, and deliver work efficiently.
+            Sign in to {APP_NAME} and take control of your team&apos;s work.
           </p>
         </div>
         <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-white/5" />
@@ -55,11 +60,8 @@ function Login() {
 
       <div className="flex-1 flex items-center justify-center p-6 bg-surface-muted">
         <div className="w-full max-w-md animate-slide-up">
-          <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">TF</span>
-            </div>
-            <span className="text-lg font-bold text-slate-900">TaskFlow</span>
+          <div className="lg:hidden flex justify-center mb-8">
+            <BrandLogo size="md" />
           </div>
 
           <div className="glass-card p-8">
@@ -77,7 +79,12 @@ function Login() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-medium text-slate-700">Password</label>
+                  <Link to="/forgot-password" className="text-xs text-brand-600 font-semibold hover:text-brand-700">
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="input-field pl-9" />
@@ -91,11 +98,20 @@ function Login() {
 
             <p className="text-center text-slate-500 text-sm mt-6">
               Don't have an account?{' '}
-              <Link to="/register" className="text-brand-600 font-semibold hover:text-brand-700">Create one</Link>
+              <Link
+                to={redirectTo !== '/workspaces'
+                  ? `/register?email=${encodeURIComponent(email)}&redirect=${encodeURIComponent(redirectTo)}`
+                  : '/register'}
+                className="text-brand-600 font-semibold hover:text-brand-700"
+              >
+                Create one
+              </Link>
             </p>
           </div>
         </div>
       </div>
+      </div>
+      <Footer />
     </div>
   )
 }

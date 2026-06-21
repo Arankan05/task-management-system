@@ -1,25 +1,29 @@
 const express = require("express");
 const router = express.Router();
-const taskController = require("../controllers/taskController");
-const authenticate = require("../middleware/authMiddleware");
-const roleMiddleware = require("../middleware/roleMiddleware");
-const { validateCreateTask, validateUpdateTask } = require("../middleware/taskValidation");
+const auth = require("../middleware/authMiddleware");
+const projectCtrl = require("../controllers/projectController");
+const taskCtrl = require("../controllers/taskController");
 
-router.post("/", authenticate, validateCreateTask, taskController.createTask);
+router.use(auth);
 
-router.get("/", authenticate, taskController.getAllTasks);
-router.get("/my-tasks", authenticate, taskController.getMyTasks);
-router.get("/filter", authenticate, taskController.getTasksByFilter);
-router.get("/assigned/:userId", authenticate, taskController.getTasksByAssignee);
-router.get("/:id", authenticate, taskController.getTaskById);
+router.get("/:id", projectCtrl.getProject);
+router.put("/:id", projectCtrl.updateProject);
+router.delete("/:id", projectCtrl.deleteProject);
+router.get("/:id/stats", projectCtrl.getProjectStats);
 
-router.put("/:id", authenticate,validateUpdateTask, taskController.updateTask);
+router.get("/:projectId/tasks", taskCtrl.listTasks);
+router.post("/:projectId/tasks", taskCtrl.createTask);
+router.get("/:projectId/labels", taskCtrl.listLabels);
+router.post("/:projectId/labels", taskCtrl.createLabel);
 
-router.delete("/:id", authenticate, roleMiddleware("ADMIN"), taskController.deleteTask);
+router.get("/tasks/:id", taskCtrl.getTask);
+router.put("/tasks/:id", taskCtrl.updateTask);
+router.patch("/tasks/:id/status", taskCtrl.updateTaskStatus);
+router.delete("/tasks/:id", taskCtrl.deleteTask);
 
-router.patch("/:id/assign", authenticate, roleMiddleware("ADMIN","COLLABORATOR"), taskController.assignTask);
-router.patch("/:id/unassign", authenticate, roleMiddleware("ADMIN","COLLABORATOR"), taskController.unassignTask);
-router.patch("/:id/status", authenticate, taskController.updateTaskStatus);
-router.patch("/:id/priority", authenticate, taskController.updateTaskPriority);
+router.post("/tasks/:taskId/labels/:labelId", taskCtrl.addTaskLabel);
+router.delete("/tasks/:taskId/labels/:labelId", taskCtrl.removeTaskLabel);
+router.post("/tasks/:taskId/comments", taskCtrl.addComment);
+router.post("/tasks/:taskId/attachments", taskCtrl.addAttachment);
 
 module.exports = router;

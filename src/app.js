@@ -8,7 +8,10 @@ const { Server } = require("socket.io");
 require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
-const taskRoutes = require("./routes/taskRoutes");
+const workspaceRoutes = require("./routes/workspaceRoutes");
+const projectNestedRoutes = require("./routes/projectRoutes");
+const projectRoutes = require("./routes/taskRoutes");
+const invitationRoutes = require("./routes/invitationRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
@@ -31,27 +34,31 @@ initsocketHandler(io);
 app.set("io", io);
 
 //CORS configuration
+//CORS configuration
 app.use(cors({
     origin: ["http://localhost:3000", "http://localhost:5173"],
-    methods: ["GET", "POST", "PUT", "PATHCH", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 app.use(helmet());
 app.use(morgan("dev"));
 
 //Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/tasks", taskRoutes);
+app.use("/api/workspaces", workspaceRoutes);
+app.use("/api/workspaces/:workspaceId/projects", projectNestedRoutes);
+app.use("/api/invitations", invitationRoutes);
+app.use("/api/projects", projectRoutes);
 
 //Swagger Docs
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 //Test Route
 app.get("/", (req, res) => { 
-    res.send("Task Management Backend Running"); 
+    res.send("TASKPULSE Backend Running"); 
 });
 
 //Error Middleware

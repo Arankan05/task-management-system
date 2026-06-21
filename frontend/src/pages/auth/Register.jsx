@@ -1,14 +1,28 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import api from '../../services/api'
 import Alert from '../../components/ui/Alert'
+import Footer from '../../components/Footer'
+import BrandLogo, { APP_NAME } from '../../components/BrandLogo'
 import { UserPlus, Mail, Lock, User } from 'lucide-react'
 
 function Register() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' })
+  const [searchParams] = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || ''
+  const [form, setForm] = useState({
+    name: '',
+    email: searchParams.get('email') || '',
+    password: '',
+    confirmPassword: '',
+  })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const prefill = searchParams.get('email')
+    if (prefill) setForm((prev) => ({ ...prev, email: prefill }))
+  }, [searchParams])
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -32,7 +46,13 @@ function Register() {
         email: form.email,
         password: form.password,
       })
-      if (data.success) navigate('/login')
+      if (data.success) {
+        const loginParams = new URLSearchParams()
+        if (form.email) loginParams.set('email', form.email)
+        if (redirectTo) loginParams.set('redirect', redirectTo)
+        const qs = loginParams.toString()
+        navigate(qs ? `/login?${qs}` : '/login')
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed')
     } finally {
@@ -41,20 +61,16 @@ function Register() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex flex-1">
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 p-12 flex-col justify-between relative overflow-hidden">
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <span className="text-white font-bold">TF</span>
-            </div>
-            <span className="text-white text-xl font-bold">TaskFlow</span>
-          </div>
+          <BrandLogo size="lg" lightText className="mb-8" />
           <h1 className="text-4xl font-bold text-white leading-tight mb-4">
             Start organizing<br />your work today.
           </h1>
           <p className="text-brand-100 text-lg max-w-md">
-            Join TaskFlow and take control of your projects with powerful task management tools.
+            Join {APP_NAME} and take control of your projects with powerful task management tools.
           </p>
         </div>
         <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-white/5" />
@@ -64,7 +80,7 @@ function Register() {
         <div className="w-full max-w-md animate-slide-up">
           <div className="glass-card p-8">
             <h2 className="text-2xl font-bold text-slate-900 mb-1">Create account</h2>
-            <p className="text-slate-500 text-sm mb-6">Get started with TaskFlow</p>
+            <p className="text-slate-500 text-sm mb-6">Get started with {APP_NAME}</p>
 
             {error && <div className="mb-4"><Alert message={error} type="error" onClose={() => setError('')} /></div>}
 
@@ -105,11 +121,20 @@ function Register() {
 
             <p className="text-center text-slate-500 text-sm mt-6">
               Already have an account?{' '}
-              <Link to="/login" className="text-brand-600 font-semibold hover:text-brand-700">Sign in</Link>
+              <Link
+                to={redirectTo
+                  ? `/login?email=${encodeURIComponent(form.email)}&redirect=${encodeURIComponent(redirectTo)}`
+                  : '/login'}
+                className="text-brand-600 font-semibold hover:text-brand-700"
+              >
+                Sign in
+              </Link>
             </p>
           </div>
         </div>
       </div>
+      </div>
+      <Footer />
     </div>
   )
 }
