@@ -5,3 +5,219 @@ generator client {
 datasource db {
   provider = "mysql"
 }
+
+model User {
+  id                  String            @id @default(uuid())
+  name                String
+  email               String            @unique
+  password            String
+  role                String            @default("COLLABORATOR")
+  isActive            Boolean           @default(true)
+  mustResetPassword   Boolean           @default(false)
+  tempPasswordExpiresAt DateTime?
+  profilePhoto        String?           @db.Text
+  contactNumber       String?
+  address             String?           @db.Text
+  dateOfBirth         DateTime?
+  gender              String?
+  resetOtp            String?
+  resetOtpExpires     DateTime?
+  resetOtpSendCount   Int               @default(0)
+  resetOtpWindowStart DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  ownedWorkspaces     Workspace[]           @relation("WorkspaceOwner")
+  workspaceMembers    WorkspaceMember[]
+  sentInvitations     WorkspaceInvitation[] @relation("InvitedBy")
+  createdProjects     Project[]         @relation("ProjectCreator")
+  assignedTasks       Task[]            @relation("AssignedTo")
+  createdTasks        Task[]            @relation("CreatedBy")
+  comments            Comment[]
+  attachments         Attachment[]
+  refreshTokens       RefreshToken[]
+  notifications       Notification[]
+  joinRequests        WorkspaceJoinRequest[] @relation("JoinRequestUser")
+  sentJoinRequests    WorkspaceJoinRequest[] @relation("JoinRequestInviter")
+}
+
+model Workspace {
+  id          String            @id @default(uuid())
+  name        String
+  description String?           @db.Text
+  color       String            @default("#7C3AED")
+  ownerId     String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  owner       User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     WorkspaceMember[]
+  projects    Project[]
+  invitations WorkspaceInvitation[]
+  joinRequests WorkspaceJoinRequest[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        String    @default("MEMBER")
+  joinedAt    DateTime  @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model WorkspaceInvitation {
+  id          String    @id @default(uuid())
+  workspaceId String
+  email       String
+  role        String
+  token       String    @unique
+  status      String    @default("PENDING")
+  expiresAt   DateTime
+  invitedById String
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy   User      @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@index([workspaceId])
+  @@index([email])
+  @@index([status])
+}
+
+model WorkspaceJoinRequest {
+  id          String    @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        String
+  status      String    @default("PENDING")
+  invitedById String
+  expiresAt   DateTime
+  respondedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation("JoinRequestUser", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy User      @relation("JoinRequestInviter", fields: [invitedById], references: [id])
+
+  @@index([workspaceId, status])
+  @@index([userId, status])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  message   String   @db.Text
+  payload   String?  @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @db.Text
+  color       String   @default("#A855F7")
+  status      String   @default("ACTIVE")
+  workspaceId String
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation("ProjectCreator", fields: [createdById], references: [id])
+  tasks       Task[]
+  labels      Label[]
+}
+
+model Label {
+  id        String      @id @default(uuid())
+  name      String
+  color     String      @default("#7C3AED")
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     TaskLabel[]
+
+  @@unique([projectId, name])
+}
+
+model Task {
+  id           String       @id @default(uuid())
+  title        String
+  description  String?      @db.Text
+  status       String       @default("TODO")
+  priority     String       @default("MEDIUM")
+  progress     Int          @default(0)
+  dueDate      DateTime?
+  projectId    String
+  assignedToId String?
+  createdById  String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo   User?        @relation("AssignedTo", fields: [assignedToId], references: [id])
+  createdBy    User         @relation("CreatedBy", fields: [createdById], references: [id])
+  labels       TaskLabel[]
+  comments     Comment[]
+  attachments  Attachment[]
+}
+
+model TaskLabel {
+  taskId  String
+  labelId String
+  task    Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label   Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  taskId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  fileName  String
+  fileUrl   String   @db.Text
+  fileType  String?
+  taskId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+}
