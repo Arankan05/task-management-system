@@ -4,10 +4,11 @@ import { GripVertical, Calendar } from 'lucide-react'
 import Badge from '../ui/Badge'
 import { formatPriority, formatDate } from '../../utils/taskHelpers'
 
-function KanbanCard({ task }) {
+function KanbanCard({ task, draggable = true }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { task },
+    disabled: !draggable,
   })
 
   const style = {
@@ -20,9 +21,9 @@ function KanbanCard({ task }) {
     <div
       ref={setNodeRef}
       style={style}
-      className="glass-card p-3 cursor-grab active:cursor-grabbing hover:shadow-elevated transition-shadow"
+      className={`glass-card p-3 transition-shadow ${draggable ? 'cursor-grab active:cursor-grabbing hover:shadow-elevated' : 'cursor-default'}`}
       {...attributes}
-      {...listeners}
+      {...(draggable ? listeners : {})}
     >
       <div className="flex items-start gap-2 mb-2">
         <GripVertical size={14} className="text-slate-300 mt-0.5 shrink-0" />
