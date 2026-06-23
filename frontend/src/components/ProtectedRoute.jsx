@@ -21,7 +21,6 @@ function ProtectedRoute({ children }) {
   if (mustResetPassword && location.pathname !== '/mandatory-reset') {
     return <Navigate to="/mandatory-reset" replace />
   }
-
   return children
 }
 
