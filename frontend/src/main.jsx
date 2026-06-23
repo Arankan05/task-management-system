@@ -10,6 +10,8 @@ import AppInitializer from './components/AppInitializer'
 import ThemeApplier from './components/ThemeApplier'
 import App from './App.jsx'
 import './index.css'
+import { AuthProvider } from './context/AuthContext.jsx'
+import { SocketProvider } from './context/SocketContext.jsx'
 
 setupSocket(store)
 
@@ -19,11 +21,16 @@ createRoot(document.getElementById('root')).render(
       <Provider store={store}>
         <PersistGate loading={<BootScreen />} persistor={persistor}>
           <ThemeApplier />
-          <AppInitializer>
-            <App />
-          </AppInitializer>
+          <AuthProvider>
+            <SocketProvider>
+              <AppInitializer>
+                <App />
+              </AppInitializer>
+            </SocketProvider>
+          </AuthProvider>
         </PersistGate>
       </Provider>
     </ErrorBoundary>
   </StrictMode>,
+)
 )
