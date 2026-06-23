@@ -220,3 +220,4 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
 }
+}
