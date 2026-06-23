@@ -98,6 +98,19 @@ const loginUser = async (req, res) => {
             return errorResponse(res, "Account deactivated", 403, "Your account has been deactivated. Contact an administrator.");
         }
 
+        if (
+            user.mustResetPassword
+            && user.tempPasswordExpiresAt
+            && new Date() > user.tempPasswordExpiresAt
+        ) {
+            return errorResponse(
+                res,
+                "Temporary password expired",
+                403,
+                "Your temporary password has expired. Contact your administrator to recreate your account."
+            );
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
@@ -426,6 +439,7 @@ const forceResetPassword = async (req, res) => {
             data: {
                 password: hashedPassword,
                 mustResetPassword: false,
+                tempPasswordExpiresAt: null,
             },
             select: USER_SELECT,
         });

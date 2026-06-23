@@ -17,11 +17,15 @@ const getNotifications = async (req, res) => {
 // PATCH /api/notifications/:id/read — mark one notification as read
 const markAsRead = async (req, res) => {
   try {
-    const notification = await prisma.notification.update({
-      where: { id: req.params.id },
+    const notification = await prisma.notification.updateMany({
+      where: { id: req.params.id, userId: req.user.id },
       data: { isRead: true },
     });
-    return successResponse(res, "Marked as read", notification);
+    if (!notification.count) {
+      return errorResponse(res, "Notification not found", 404);
+    }
+    const updated = await prisma.notification.findUnique({ where: { id: req.params.id } });
+    return successResponse(res, "Marked as read", updated);
   } catch (error) {
     return errorResponse(res, "Failed to update", 500);
   }
