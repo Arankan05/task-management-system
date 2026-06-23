@@ -1,8 +1,8 @@
 import { useSelector } from 'react-redux'
-import { Bell } from 'lucide-react'
 import { SidebarToggle } from './Sidebar'
 import ProfileAvatar from './ProfileAvatar'
 import BrandLogo from './BrandLogo'
+import NotificationDropdown from './NotificationDropdown'
 
 function Navbar({ onMenuClick }) {
   const { user } = useSelector((state) => state.auth)
@@ -15,9 +15,7 @@ function Navbar({ onMenuClick }) {
       </div>
 
       <div className="flex items-center gap-2">
-        <button className="p-2 rounded-lg text-theme-muted hover:text-theme hover:bg-theme-surface transition-colors" aria-label="Notifications">
-          <Bell size={20} />
-        </button>
+        <NotificationDropdown />
         <ProfileAvatar user={user} size="md" />
       </div>
     </header>

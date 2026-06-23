@@ -41,7 +41,8 @@ export function setupApiInterceptors(store) {
       }
 
       if (
-        status !== 401
+        originalRequest.skipAuthRetry
+        || status !== 401
         || !originalRequest
         || originalRequest._retry
         || shouldSkipRefresh(requestUrl)

@@ -24,6 +24,30 @@ export const logoutUser = createAsyncThunk(
   }
 )
 
+export const initializeAuth = createAsyncThunk(
+  'auth/initialize',
+  async (_, { rejectWithValue }) => {
+    const silent = { skipAuthRetry: true }
+
+    try {
+      const { data } = await api.get('/auth/profile', silent)
+      return data.data
+    } catch (profileErr) {
+      if (profileErr.response?.status !== 401) {
+        return rejectWithValue(null)
+      }
+    }
+
+    try {
+      await api.post('/auth/refresh', null, silent)
+      const { data } = await api.get('/auth/profile', silent)
+      return data.data
+    } catch {
+      return rejectWithValue(null)
+    }
+  }
+)
+
 export const fetchProfile = createAsyncThunk(
   'auth/fetchProfile',
   async (_, { rejectWithValue }) => {
@@ -115,6 +139,20 @@ const authSlice = createSlice({
         state.loading = false
         state.user = null
         state.isAuthenticated = false
+        state.initialized = true
+      })
+      .addCase(initializeAuth.fulfilled, (state, action) => {
+        state.loading = false
+        state.user = action.payload
+        state.isAuthenticated = true
+        state.mustResetPassword = !!action.payload?.mustResetPassword
+        state.initialized = true
+      })
+      .addCase(initializeAuth.rejected, (state) => {
+        state.loading = false
+        state.user = null
+        state.isAuthenticated = false
+        state.mustResetPassword = false
         state.initialized = true
       })
       .addCase(updateProfile.pending, (state) => {

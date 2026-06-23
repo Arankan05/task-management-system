@@ -1,5 +1,6 @@
 const prisma = require("../config/db");
 const projectService = require("./projectService");
+const joinRequestService = require("./joinRequestService");
 const { WORKSPACE_ROLES, VALID_ROLES } = require("../utils/workspaceRoles");
 const { DEFAULT_PROJECT_NAME } = require("./projectService");
 
@@ -73,19 +74,86 @@ const updateWorkspace = async (workspaceId, data) =>
 const deleteWorkspace = async (workspaceId) =>
   prisma.workspace.delete({ where: { id: workspaceId } });
 
-const addMember = async (workspaceId, email, role = WORKSPACE_ROLES.COLLABORATOR) => {
-  if (!VALID_ROLES.includes(role)) {
-    throw new Error("Invalid role");
-  }
-  const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
-  if (!user) return null;
+const memberUserSelect = {
+  id: true,
+  name: true,
+  email: true,
+  profilePhoto: true,
+  isActive: true,
+  mustResetPassword: true,
+};
 
-  return prisma.workspaceMember.upsert({
-    where: { workspaceId_userId: { workspaceId, userId: user.id } },
-    update: { role },
-    create: { workspaceId, userId: user.id, role },
-    include: { user: { select: { id: true, name: true, email: true, profilePhoto: true } } },
-  });
+const addMember = async (workspaceId, { email, role = WORKSPACE_ROLES.COLLABORATOR, name, invitedById }, io = null) => {
+  if (!VALID_ROLES.includes(role)) {
+    const err = new Error("Invalid role");
+    err.status = 400;
+    throw err;
+  }
+
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+  if (user) {
+    if (!user.isActive) {
+      const err = new Error("This account is deactivated. Reactivate the user before adding them.");
+      err.status = 400;
+      throw err;
+    }
+
+    const existing = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: user.id } },
+    });
+    if (existing) {
+      const err = new Error("This user is already a member of this workspace");
+      err.status = 409;
+      throw err;
+    }
+
+    const pendingRequest = await prisma.workspaceJoinRequest.findFirst({
+      where: {
+        workspaceId,
+        userId: user.id,
+        status: { in: ["PENDING", "EXPIRED"] },
+      },
+    });
+    if (pendingRequest) {
+      const err = new Error("This user already has a pending workspace invitation");
+      err.status = 409;
+      throw err;
+    }
+
+    const member = await prisma.workspaceMember.create({
+      data: { workspaceId, userId: user.id, role },
+      include: { user: { select: memberUserSelect } },
+    });
+
+    return { member, created: false };
+  }
+
+  if (!name || !String(name).trim()) {
+    const err = new Error("Full name is required when adding a new user");
+    err.status = 400;
+    throw err;
+  }
+
+  if (!invitedById) {
+    const err = new Error("Inviter is required");
+    err.status = 400;
+    throw err;
+  }
+
+  const joinRequest = await joinRequestService.createPendingWorkspaceUser(
+    workspaceId,
+    {
+      name: String(name).trim(),
+      email: normalizedEmail,
+      role,
+      invitedById,
+    },
+    io
+  );
+
+  return { joinRequest, created: true, pending: true };
 };
 
 const updateMemberRole = async (workspaceId, userId, role) => {
