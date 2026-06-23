@@ -14,15 +14,31 @@ import ProjectDashboard from './pages/ProjectDashboard'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
-import AcceptInvitation from './pages/AcceptInvitation'
-import InvitationSuccess from './pages/InvitationSuccess'
+import MandatoryResetPassword from './pages/MandatoryResetPassword'
 import ProtectedRoute from './components/ProtectedRoute'
 
+function MandatoryResetRoute({ children }) {
+  const { isAuthenticated, initialized, mustResetPassword } = useSelector((state) => state.auth)
+  if (!initialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-muted">
+        <div className="animate-pulse text-theme-muted">Loading...</div>
+      </div>
+    )
+  }
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!mustResetPassword) return <Navigate to="/workspaces" replace />
+  return children
+}
+
 function PublicRoute({ children }) {
-  const token = useSelector((state) => state.auth?.token)
+  const { isAuthenticated, initialized, mustResetPassword } = useSelector((state) => state.auth)
   const params = new URLSearchParams(window.location.search)
   const redirect = params.get('redirect')
-  if (token) return <Navigate to={redirect || '/workspaces'} replace />
+  if (initialized && isAuthenticated) {
+    if (mustResetPassword) return <Navigate to="/mandatory-reset" replace />
+    return <Navigate to={redirect || '/workspaces'} replace />
+  }
   return children
 }
 
@@ -42,8 +58,7 @@ function App() {
         <Route path="/verify-otp" element={<PublicRoute><VerifyOtp /></PublicRoute>} />
         <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
 
-        <Route path="/invitations/:token" element={<AcceptInvitation />} />
-        <Route path="/invitations/:token/success" element={<InvitationSuccess />} />
+        <Route path="/mandatory-reset" element={<MandatoryResetRoute><MandatoryResetPassword /></MandatoryResetRoute>} />
 
         <Route path="/workspaces" element={<ProtectedRoute><Workspaces /></ProtectedRoute>} />
         <Route path="/workspaces/:workspaceId" element={<ProtectedRoute><WorkspaceDetail /></ProtectedRoute>} />

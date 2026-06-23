@@ -8,7 +8,7 @@ const columnStyles = {
   DONE: 'border-t-emerald-400 bg-emerald-50/30',
 }
 
-function KanbanColumn({ column, tasks }) {
+function KanbanColumn({ column, tasks, canDragTask }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
   const taskIds = tasks.map((t) => t.id)
 
@@ -28,7 +28,7 @@ function KanbanColumn({ column, tasks }) {
       <div ref={setNodeRef} className="flex-1 p-3 space-y-3 overflow-y-auto max-h-[calc(100vh-280px)]">
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
-            <KanbanCard key={task.id} task={task} />
+            <KanbanCard key={task.id} task={task} draggable={canDragTask ? canDragTask(task) : true} />
           ))}
         </SortableContext>
         {tasks.length === 0 && (

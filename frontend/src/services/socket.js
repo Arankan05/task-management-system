@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client'
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || undefined
 
 let socket = null
 let storeRef = null
@@ -55,17 +55,19 @@ export const joinProjectRoom = (projectId) => {
 
 export const connectSocket = () => {
   if (!storeRef) return null
-  const token = storeRef.getState().auth?.token
-  if (!token) { disconnectSocket(); return null }
+  const isAuthenticated = storeRef.getState().auth?.isAuthenticated
+  if (!isAuthenticated) {
+    disconnectSocket()
+    return null
+  }
 
   if (socket) {
-    socket.auth = { token }
     if (!socket.connected) socket.connect()
     return socket
   }
 
   socket = io(SOCKET_URL, {
-    auth: { token },
+    withCredentials: true,
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionAttempts: 5,

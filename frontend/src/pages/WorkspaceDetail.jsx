@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useParams, useLocation } from 'react-router-dom'
-import { Plus, Search, ListTodo, UserPlus, Trash2, Shield } from 'lucide-react'
+import { Plus, Search, ListTodo } from 'lucide-react'
 import Layout from '../components/Layout'
 import PageHeader from '../components/ui/PageHeader'
 import EmptyState from '../components/ui/EmptyState'
@@ -11,17 +11,15 @@ import Loader from '../components/ui/Loader'
 import Alert from '../components/ui/Alert'
 import { fetchTasks, setActiveProjectId } from '../store/slices/tasksSlice'
 import { setActiveWorkspace } from '../store/slices/workspacesSlice'
-import { getWorkspace, getWorkspaceMembers, getWorkspaceStats, updateMemberRole, removeWorkspaceMember } from '../services/workspaceService'
-import { getWorkspaceInvitations, resendInvitation, cancelInvitation } from '../services/invitationService'
+import { getWorkspace, getWorkspaceMembers, getWorkspaceStats } from '../services/workspaceService'
 import { getSocket } from '../services/socket'
 import WorkspaceTabs from '../components/workspace/WorkspaceTabs'
 import WorkspaceAnalyzeTab from '../components/workspace/WorkspaceAnalyzeTab'
-import InviteMemberModal from '../components/workspace/InviteMemberModal'
-import PendingInvitationsList from '../components/workspace/PendingInvitationsList'
+import TeamMembersSection from '../components/workspace/TeamMembersSection'
 import {
   TASK_STATUSES, TASK_PRIORITIES, STATUS_LABELS, PRIORITY_LABELS,
-  WORKSPACE_ROLES, WORKSPACE_ROLE_LABELS,
 } from '../utils/constants'
+import { canManageTeam, canManageProjectsAndTasks, getMyWorkspaceRole } from '../utils/permissions'
 
 const TABS = ['analyze', 'tasks', 'team']
 
@@ -37,31 +35,17 @@ function WorkspaceDetail() {
   const [members, setMembers] = useState([])
   const [loadingWs, setLoadingWs] = useState(true)
   const [taskModal, setTaskModal] = useState(false)
-  const [memberModal, setMemberModal] = useState(false)
-  const [invitations, setInvitations] = useState([])
-  const [invitationActionId, setInvitationActionId] = useState(null)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [priority, setPriority] = useState('')
   const [sort, setSort] = useState('recent')
   const [localError, setLocalError] = useState('')
-  const [localSuccess, setLocalSuccess] = useState('')
   const [stats, setStats] = useState(null)
   const [statsLoading, setStatsLoading] = useState(false)
 
-  const myMembership = members.find((m) => m.userId === user?.id)
-  const myRole = myMembership?.role === 'OWNER' ? WORKSPACE_ROLES.ADMINISTRATOR : myMembership?.role
-  const canManageTeam = myRole === WORKSPACE_ROLES.ADMINISTRATOR
-
-  const loadInvitations = async () => {
-    if (!canManageTeam) return
-    try {
-      const list = await getWorkspaceInvitations(workspaceId)
-      setInvitations(list)
-    } catch {
-      setLocalError('Failed to load invitations')
-    }
-  }
+  const myRole = getMyWorkspaceRole(members, user?.id)
+  const canManageTeamMembers = canManageTeam(myRole)
+  const canManageTasks = canManageProjectsAndTasks(myRole)
 
   const loadWorkspace = async () => {
     setLoadingWs(true)
@@ -106,65 +90,6 @@ function WorkspaceDetail() {
     }
   }, [tab, workspaceId])
 
-  useEffect(() => {
-    if (tab === 'team' && canManageTeam) {
-      loadInvitations()
-    }
-  }, [tab, workspaceId, canManageTeam])
-
-  const handleInvitationSent = () => {
-    setLocalSuccess('Invitation sent successfully')
-    loadInvitations()
-  }
-
-  const handleResendInvitation = async (invitationId) => {
-    setInvitationActionId(invitationId)
-    setLocalError('')
-    try {
-      await resendInvitation(invitationId)
-      setLocalSuccess('Invitation resent')
-      loadInvitations()
-    } catch (err) {
-      setLocalError(err.response?.data?.message || 'Failed to resend invitation')
-    } finally {
-      setInvitationActionId(null)
-    }
-  }
-
-  const handleCancelInvitation = async (invitationId) => {
-    if (!window.confirm('Cancel this invitation?')) return
-    setInvitationActionId(invitationId)
-    setLocalError('')
-    try {
-      await cancelInvitation(invitationId)
-      setLocalSuccess('Invitation cancelled')
-      loadInvitations()
-    } catch (err) {
-      setLocalError(err.response?.data?.message || 'Failed to cancel invitation')
-    } finally {
-      setInvitationActionId(null)
-    }
-  }
-
-  const handleRoleChange = async (userId, role) => {
-    try {
-      await updateMemberRole(workspaceId, userId, role)
-      loadWorkspace()
-    } catch (err) {
-      setLocalError(err.response?.data?.message || 'Failed to update role')
-    }
-  }
-
-  const handleRemoveMember = async (userId) => {
-    if (!window.confirm('Remove this member from the workspace?')) return
-    try {
-      await removeWorkspaceMember(workspaceId, userId)
-      loadWorkspace()
-    } catch (err) {
-      setLocalError(err.response?.data?.message || 'Failed to remove member')
-    }
-  }
-
   if (loadingWs) {
     return <Layout><div className="flex justify-center py-20"><Loader /></div></Layout>
   }
@@ -183,14 +108,9 @@ function WorkspaceDetail() {
           subtitle={`${members.length} team member${members.length !== 1 ? 's' : ''} · Manage tasks, analytics, and collaboration`}
           actions={
             <>
-              {tab === 'tasks' && (
+              {tab === 'tasks' && canManageTasks && (
                 <button type="button" onClick={() => setTaskModal(true)} className="btn-primary">
                   <Plus size={16} /> New Task
-                </button>
-              )}
-              {tab === 'team' && canManageTeam && (
-                <button type="button" onClick={() => setMemberModal(true)} className="btn-primary">
-                  <UserPlus size={16} /> Invite Member
                 </button>
               )}
             </>
@@ -198,7 +118,6 @@ function WorkspaceDetail() {
         />
 
         {(localError || error) && <div className="mb-4"><Alert message={localError || error} type="error" onClose={() => setLocalError('')} /></div>}
-        {localSuccess && <div className="mb-4"><Alert message={localSuccess} type="success" onClose={() => setLocalSuccess('')} /></div>}
 
         <WorkspaceTabs activeTab={tab} onTabChange={setTab} />
 
@@ -251,71 +170,18 @@ function WorkspaceDetail() {
         )}
 
         {tab === 'team' && (
-          <div className="section-card">
-            <div className="section-card-header">
-              <h2 className="font-bold text-theme flex items-center gap-2"><Shield size={18} className="text-primary" /> Team Members</h2>
-              <p className="text-sm text-theme-muted mt-1">Assign roles: Administrator, Project Manager, or Collaborator</p>
-            </div>
-            <div className="divide-y divide-theme">
-              {members.map((member) => {
-                const role = member.role === 'OWNER' ? WORKSPACE_ROLES.ADMINISTRATOR : member.role
-                return (
-                  <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 hover:bg-theme-surface/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-full bg-primary/15 text-primary font-bold flex items-center justify-center ring-2 ring-primary/10">
-                        {member.user?.name?.charAt(0) || '?'}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-theme">{member.user?.name}</p>
-                        <p className="text-xs text-theme-muted">{member.user?.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {canManageTeam && member.userId !== workspace?.ownerId ? (
-                        <select
-                          value={role}
-                          onChange={(e) => handleRoleChange(member.userId, e.target.value)}
-                          className="input-field !w-auto text-sm min-w-[160px]"
-                        >
-                          {Object.entries(WORKSPACE_ROLE_LABELS).map(([val, label]) => (
-                            <option key={val} value={val}>{label}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="text-sm font-medium text-primary px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-                          {WORKSPACE_ROLE_LABELS[role] || role}
-                        </span>
-                      )}
-                      {canManageTeam && member.userId !== workspace?.ownerId && member.userId !== user?.id && (
-                        <button type="button" onClick={() => handleRemoveMember(member.userId)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors" aria-label="Remove member">
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {tab === 'team' && canManageTeam && (
-          <PendingInvitationsList
-            invitations={invitations}
-            onResend={handleResendInvitation}
-            onCancel={handleCancelInvitation}
-            loadingId={invitationActionId}
+          <TeamMembersSection
+            workspaceId={workspaceId}
+            workspace={workspace}
+            members={members}
+            currentUserId={user?.id}
+            canManageTeamMembers={canManageTeamMembers}
+            onRefresh={loadWorkspace}
+            onError={setLocalError}
           />
         )}
 
         <TaskFormModal isOpen={taskModal} onClose={() => setTaskModal(false)} workspaceId={workspaceId} onSuccess={() => dispatch(fetchTasks({ workspaceId }))} />
-
-        <InviteMemberModal
-          isOpen={memberModal}
-          onClose={() => setMemberModal(false)}
-          workspaceId={workspaceId}
-          onSuccess={handleInvitationSent}
-        />
       </div>
     </Layout>
   )

@@ -4,11 +4,14 @@ const router = express.Router();
 const {
     registerUser,
     loginUser,
+    logoutUser,
+    refreshAccessToken,
     getProfile,
     updateProfile,
     forgotPassword,
     verifyResetOtp,
     resetPassword,
+    forceResetPassword,
 } = require("../controllers/authController");
 
 const authMiddleware = require("../middleware/authMiddleware");
@@ -68,10 +71,13 @@ router.post(
  *         description: Login successful
  */
 router.post("/login", loginUser);
+router.post("/refresh", refreshAccessToken);
+router.post("/logout", logoutUser);
 
 router.post("/forgot-password", forgotPassword);
 router.post("/verify-reset-otp", verifyResetOtp);
 router.post("/reset-password", resetPassword);
+router.post("/force-reset-password", authMiddleware, forceResetPassword);
 
 router.get("/profile", authMiddleware, getProfile);
 

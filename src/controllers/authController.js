@@ -3,7 +3,17 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const validator = require("validator");
 const { successResponse, errorResponse } = require("../utils/response");
+const { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest, getTokenFromRequest } = require("../utils/authCookie");
+const {
+  signAccessToken,
+  createRefreshToken,
+  verifyRefreshToken,
+  revokeRefreshToken,
+  revokeAllUserRefreshTokens,
+  rotateRefreshToken,
+} = require("../services/authTokenService");
 const { sendPasswordResetOtp, OTP_EXPIRY_MINUTES } = require("../services/emailService");
+const { validatePassword } = require("../utils/passwordPolicy");
 
 const OTP_MAX_REQUESTS = 3;
 const OTP_WINDOW_MS = 60 * 60 * 1000;
@@ -27,6 +37,8 @@ const USER_SELECT = {
     name: true,
     email: true,
     role: true,
+    isActive: true,
+    mustResetPassword: true,
     profilePhoto: true,
     contactNumber: true,
     address: true,
@@ -88,36 +100,82 @@ const loginUser = async (req, res) => {
             return errorResponse(res, "Invalid credentials", 400);
         }
 
+        if (!user.isActive) {
+            return errorResponse(res, "Account deactivated", 403, "Your account has been deactivated. Contact an administrator.");
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
             return errorResponse(res, "Invalid credentials", 400);
         }
 
-        const token = jwt.sign(
-            {
-                id: user.id,
-                role: user.role,
-            },
-            process.env.JWT_SECRET,
-            {
-                expiresIn: "7d",
-            }
-        );
+        const accessToken = signAccessToken(user);
+        const refreshToken = await createRefreshToken(user.id);
 
         const { password: _, ...safeUser } = user;
 
-        return successResponse(
-            res,
-            "Login successful",
-            {
-                token,
-                user: safeUser,
-            }
-        );
+        setAuthCookies(res, accessToken, refreshToken);
+
+        return successResponse(res, "Login successful", {
+            user: safeUser,
+            mustResetPassword: user.mustResetPassword,
+        });
     } catch (error) {
         console.error(error);
         return errorResponse(res, "Server Error", 500);
+    }
+};
+
+const logoutUser = async (req, res) => {
+    const refreshToken = getRefreshTokenFromRequest(req);
+
+    if (refreshToken) {
+        await revokeRefreshToken(refreshToken);
+    } else {
+        const accessToken = getTokenFromRequest(req);
+        if (accessToken) {
+            try {
+                const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
+                if (decoded?.id) {
+                    await revokeAllUserRefreshTokens(decoded.id);
+                }
+            } catch {
+                // access token may be expired; cookies will still be cleared
+            }
+        }
+    }
+
+    clearAuthCookies(res);
+    return successResponse(res, "Logged out successfully");
+};
+
+const refreshAccessToken = async (req, res) => {
+    try {
+        const refreshToken = getRefreshTokenFromRequest(req);
+
+        if (!refreshToken) {
+            clearAuthCookies(res);
+            return errorResponse(res, "Refresh token required", 401);
+        }
+
+        const record = await verifyRefreshToken(refreshToken);
+
+        if (!record?.user) {
+            clearAuthCookies(res);
+            return errorResponse(res, "Invalid or expired refresh token", 401);
+        }
+
+        const accessToken = signAccessToken(record.user);
+        const newRefreshToken = await rotateRefreshToken(refreshToken, record.userId);
+
+        setAuthCookies(res, accessToken, newRefreshToken);
+
+        return successResponse(res, "Token refreshed successfully");
+    } catch (error) {
+        console.error(error);
+        clearAuthCookies(res);
+        return errorResponse(res, "Failed to refresh token", 500);
     }
 };
 
@@ -292,12 +350,13 @@ const resetPassword = async (req, res) => {
             return errorResponse(res, "Reset token is required", 400);
         }
 
-        if (!newPassword || newPassword.length < 6) {
-            return errorResponse(
-                res,
-                "Password must be at least 6 characters",
-                400
-            );
+        if (!newPassword) {
+            return errorResponse(res, "New password is required", 400);
+        }
+
+        const passwordCheck = validatePassword(newPassword);
+        if (!passwordCheck.valid) {
+            return errorResponse(res, passwordCheck.message, 400);
         }
 
         let decoded;
@@ -325,6 +384,7 @@ const resetPassword = async (req, res) => {
             where: { id: user.id },
             data: {
                 password: hashedPassword,
+                mustResetPassword: false,
                 ...clearResetOtp,
             },
         });
@@ -339,12 +399,59 @@ const resetPassword = async (req, res) => {
     }
 };
 
+const forceResetPassword = async (req, res) => {
+    try {
+        const { newPassword, confirmPassword } = req.body;
+
+        if (!newPassword || !confirmPassword) {
+            return errorResponse(res, "New password and confirmation are required", 400);
+        }
+
+        if (newPassword !== confirmPassword) {
+            return errorResponse(res, "Passwords do not match", 400);
+        }
+
+        const passwordCheck = validatePassword(newPassword);
+        if (!passwordCheck.valid) {
+            return errorResponse(res, passwordCheck.message, 400);
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        if (!user) {
+            return errorResponse(res, "User not found", 404);
+        }
+
+        if (!user.mustResetPassword) {
+            return errorResponse(res, "Password reset is not required for this account", 400);
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        const updated = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                mustResetPassword: false,
+            },
+            select: USER_SELECT,
+        });
+
+        return successResponse(res, "Password updated successfully", updated);
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
+    logoutUser,
+    refreshAccessToken,
     getProfile,
     updateProfile,
     forgotPassword,
     verifyResetOtp,
     resetPassword,
+    forceResetPassword,
 };

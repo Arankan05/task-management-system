@@ -32,8 +32,12 @@ function Login() {
     if (password.length < 6) return setValidationError('Password must be at least 6 characters')
 
     try {
-      await dispatch(loginUser({ email, password })).unwrap()
-      navigate(redirectTo)
+      const result = await dispatch(loginUser({ email, password })).unwrap()
+      if (result.mustResetPassword) {
+        navigate('/mandatory-reset')
+      } else {
+        navigate(redirectTo)
+      }
     } catch {
       // error handled in slice
     }
