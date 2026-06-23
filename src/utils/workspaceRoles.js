@@ -25,6 +25,13 @@ const canManageWorkspace = (role) => normalizeRole(role) === WORKSPACE_ROLES.ADM
 const canManageAllTasks = (role) =>
   [WORKSPACE_ROLES.ADMINISTRATOR, WORKSPACE_ROLES.PROJECT_MANAGER].includes(normalizeRole(role));
 
+const canManageProjects = (role) => canManageAllTasks(role);
+
+const isCollaborator = (role) => normalizeRole(role) === WORKSPACE_ROLES.COLLABORATOR;
+
+const canCollaboratorAccessTask = (task, userId) =>
+  task?.assignedToId === userId;
+
 module.exports = {
   WORKSPACE_ROLES,
   ROLE_LABELS,
@@ -33,4 +40,7 @@ module.exports = {
   canManageMembers,
   canManageWorkspace,
   canManageAllTasks,
+  canManageProjects,
+  isCollaborator,
+  canCollaboratorAccessTask,
 };

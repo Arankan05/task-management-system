@@ -12,6 +12,8 @@ model User {
   email               String            @unique
   password            String
   role                String            @default("COLLABORATOR")
+  isActive            Boolean           @default(true)
+  mustResetPassword   Boolean           @default(false)
   profilePhoto        String?           @db.Text
   contactNumber       String?
   address             String?           @db.Text
@@ -22,6 +24,7 @@ model User {
   resetOtpSendCount   Int               @default(0)
   resetOtpWindowStart DateTime?
   createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
   ownedWorkspaces     Workspace[]           @relation("WorkspaceOwner")
   workspaceMembers    WorkspaceMember[]
@@ -31,6 +34,7 @@ model User {
   createdTasks        Task[]            @relation("CreatedBy")
   comments            Comment[]
   attachments         Attachment[]
+  refreshTokens       RefreshToken[]
 }
 
 model Workspace {
@@ -163,4 +167,17 @@ model Attachment {
 
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }

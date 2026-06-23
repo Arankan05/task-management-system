@@ -1,7 +1,7 @@
 const workspaceService = require("../services/workspaceService");
 const projectService = require("../services/projectService");
 const taskService = require("../services/taskService");
-const { isWorkspaceMember, getWorkspaceMembership } = require("../services/accessService");
+const { isWorkspaceMember, getWorkspaceMembership, assertCanManageTasks, getWorkspaceRole, getTaskListFiltersForRole } = require("../services/accessService");
 const { successResponse, errorResponse } = require("../utils/response");
 const {
   WORKSPACE_ROLES,
@@ -177,13 +177,12 @@ const removeMember = async (req, res) => {
 const listTasks = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!(await isWorkspaceMember(req.user.id, id))) {
-      return errorResponse(res, "Access denied", 403);
-    }
+    const role = await getWorkspaceRole(req.user.id, id);
+    if (!role) return errorResponse(res, "Access denied", 403);
 
     const project = await getDefaultProject(id, req.user.id);
     const { status, priority, assignedToId, search, sort, labelId } = req.query;
-    const tasks = await taskService.getTasksByProject(project.id, {
+    const filters = getTaskListFiltersForRole(role, req.user.id, {
       status,
       priority,
       assignedToId,
@@ -191,6 +190,7 @@ const listTasks = async (req, res) => {
       sort,
       labelId,
     });
+    const tasks = await taskService.getTasksByProject(project.id, filters);
     return successResponse(res, "Tasks fetched", tasks);
   } catch (error) {
     console.error(error);
@@ -201,9 +201,8 @@ const listTasks = async (req, res) => {
 const createTask = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!(await isWorkspaceMember(req.user.id, id))) {
-      return errorResponse(res, "Access denied", 403);
-    }
+    const permission = await assertCanManageTasks(req.user.id, id);
+    if (!permission.ok) return errorResponse(res, permission.message, 403);
 
     const { title, description, status, priority, progress, dueDate, assignedToId } = req.body;
     if (!title?.trim()) return errorResponse(res, "Title is required", 400);
