@@ -35,9 +35,9 @@ export const getWorkspaceMembers = async (workspaceId) => {
   return data.data
 }
 
-export const addWorkspaceMember = async (workspaceId, email, role) => {
-  const { data } = await api.post(`/workspaces/${workspaceId}/members`, { email, role })
-  return data.data
+export const addWorkspaceMember = async (workspaceId, payload) => {
+  const { data } = await api.post(`/workspaces/${workspaceId}/members`, payload)
+  return data
 }
 
 export const updateMemberRole = async (workspaceId, userId, role) => {

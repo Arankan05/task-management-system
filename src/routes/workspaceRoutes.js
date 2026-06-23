@@ -6,6 +6,7 @@ const requireWorkspaceAdmin = require("../middleware/requireWorkspaceAdmin");
 const validateAdminUser = require("../middleware/validateAdminUser");
 const ctrl = require("../controllers/workspaceController");
 const userCtrl = require("../controllers/userController");
+const joinRequestCtrl = require("../controllers/joinRequestController");
 
 router.use(auth);
 router.use(ensurePasswordChanged);
@@ -21,6 +22,10 @@ router.post("/:id/users", requireWorkspaceAdmin, validateAdminUser, userCtrl.cre
 router.patch("/:id/users/:userId", requireWorkspaceAdmin, userCtrl.updateUser);
 router.patch("/:id/users/:userId/deactivate", requireWorkspaceAdmin, userCtrl.deactivateUser);
 router.patch("/:id/users/:userId/activate", requireWorkspaceAdmin, userCtrl.activateUser);
+
+router.get("/:id/join-requests", joinRequestCtrl.listWorkspaceRequests);
+router.post("/:id/join-requests/:requestId/recreate", joinRequestCtrl.recreateRequest);
+router.delete("/:id/join-requests/:requestId", joinRequestCtrl.cancelRequest);
 
 router.get("/:id/members", ctrl.listMembers);
 router.post("/:id/members", ctrl.addMember);

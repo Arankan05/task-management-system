@@ -3,12 +3,12 @@ import { Search, UserPlus, UserX, UserCheck, Shield, Trash2 } from 'lucide-react
 import Alert from '../ui/Alert'
 import Modal from '../ui/Modal'
 import {
-  createWorkspaceUser,
   deactivateWorkspaceUser,
   activateWorkspaceUser,
 } from '../../services/userService'
-import { updateMemberRole, removeWorkspaceMember } from '../../services/workspaceService'
+import { addWorkspaceMember, updateMemberRole, removeWorkspaceMember } from '../../services/workspaceService'
 import { WORKSPACE_ROLES, WORKSPACE_ROLE_LABELS } from '../../utils/constants'
+import PendingUsersList from './PendingUsersList'
 
 const ROLE_FILTER_OPTIONS = [
   { value: '', label: 'All roles' },
@@ -23,7 +23,7 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'inactive', label: 'Deactivated' },
 ]
 
-const CREATE_ROLE_OPTIONS = ROLE_FILTER_OPTIONS.filter((o) => o.value)
+const ROLE_OPTIONS = ROLE_FILTER_OPTIONS.filter((o) => o.value)
 
 function TeamMembersSection({
   workspaceId,
@@ -39,9 +39,10 @@ function TeamMembersSection({
   const [statusFilter, setStatusFilter] = useState('')
   const [success, setSuccess] = useState('')
   const [actionId, setActionId] = useState(null)
-  const [modalOpen, setModalOpen] = useState(false)
+  const [addModalOpen, setAddModalOpen] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', role: 'COLLABORATOR' })
   const [saving, setSaving] = useState(false)
+  const [pendingRefreshKey, setPendingRefreshKey] = useState(0)
 
   const normalizeRole = (role) => (role === 'OWNER' ? WORKSPACE_ROLES.ADMINISTRATOR : role)
 
@@ -111,25 +112,30 @@ function TeamMembersSection({
     }
   }
 
-  const handleCreate = async (e) => {
+  const handleAddMember = async (e) => {
     e.preventDefault()
-    if (!form.name.trim() || !form.email.trim() || !form.role) {
-      onError('Name, email, and role are required')
+    if (!form.email.trim() || !form.role) {
+      onError('Email and role are required')
+      return
+    }
+    if (!form.name.trim()) {
+      onError('Full name is required')
       return
     }
     setSaving(true)
     try {
-      await createWorkspaceUser(workspaceId, {
+      const { message } = await addWorkspaceMember(workspaceId, {
         name: form.name.trim(),
         email: form.email.trim(),
         role: form.role,
       })
-      setSuccess('User created. A welcome email with a temporary password was sent.')
+      setSuccess(message || 'Member added successfully')
       setForm({ name: '', email: '', role: 'COLLABORATOR' })
-      setModalOpen(false)
+      setAddModalOpen(false)
       onRefresh()
+      setPendingRefreshKey((k) => k + 1)
     } catch (err) {
-      onError(err.response?.data?.message || 'Failed to create user')
+      onError(err.response?.data?.message || 'Failed to add member')
     } finally {
       setSaving(false)
     }
@@ -141,6 +147,7 @@ function TeamMembersSection({
     && member.userId !== currentUserId
 
   return (
+    <>
     <div className="section-card">
       <div className="section-card-header flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
@@ -150,8 +157,8 @@ function TeamMembersSection({
           <p className="text-sm text-theme-muted mt-1">Assign roles: Administrator, Project Manager, or Collaborator</p>
         </div>
         {canManageTeamMembers && (
-          <button type="button" onClick={() => setModalOpen(true)} className="btn-primary shrink-0">
-            <UserPlus size={16} /> Create User
+          <button type="button" onClick={() => setAddModalOpen(true)} className="btn-primary shrink-0">
+            <UserPlus size={16} /> Add Member
           </button>
         )}
       </div>
@@ -270,33 +277,61 @@ function TeamMembersSection({
         )}
       </div>
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Create User">
-        <form onSubmit={handleCreate} className="space-y-4">
+      <Modal isOpen={addModalOpen} onClose={() => setAddModalOpen(false)} title="Add Member">
+        <form onSubmit={handleAddMember} className="space-y-4">
           <p className="text-sm text-theme-muted">
-            A temporary password will be emailed to the user. They must set a new password on first login.
+            If the email already has an account, they join this workspace immediately.
+            If not, an account is created with a 24-hour temporary password. After login and password reset,
+            they must accept or reject the workspace invitation from notifications.
           </p>
           <div>
             <label className="label-field">Full name *</label>
-            <input className="input-field" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+            <input
+              className="input-field"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
           </div>
           <div>
             <label className="label-field">Email *</label>
-            <input type="email" className="input-field" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+            <input
+              type="email"
+              className="input-field"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="user@example.com"
+              required
+            />
           </div>
           <div>
             <label className="label-field">Workspace role *</label>
             <select className="input-field" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} required>
-              {CREATE_ROLE_OPTIONS.map((opt) => (
+              {ROLE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
           </div>
           <button type="submit" disabled={saving} className="btn-primary w-full">
-            {saving ? 'Creating...' : 'Create & Send Email'}
+            {saving ? 'Adding...' : 'Add Member'}
           </button>
         </form>
       </Modal>
     </div>
+
+      {canManageTeamMembers && (
+        <PendingUsersList
+          workspaceId={workspaceId}
+          refreshKey={pendingRefreshKey}
+          onRefresh={() => {
+            onRefresh()
+            setPendingRefreshKey((k) => k + 1)
+          }}
+          onError={onError}
+          onSuccess={setSuccess}
+        />
+      )}
+    </>
   )
 }
 
