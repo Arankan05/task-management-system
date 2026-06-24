@@ -6,6 +6,7 @@ const {
     loginUser,
     logoutUser,
     refreshAccessToken,
+    getSession,
     getProfile,
     updateProfile,
     forgotPassword,
@@ -71,6 +72,7 @@ router.post(
  *         description: Login successful
  */
 router.post("/login", loginUser);
+router.get("/session", getSession);
 router.post("/refresh", refreshAccessToken);
 router.post("/logout", logoutUser);
 
