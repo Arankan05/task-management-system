@@ -1,73 +1,52 @@
-# Task Management System Backend
+# TASKPULSE — Task Management System
 
-Backend API for the Task Management System project.
+Full-stack MERN-style application (React + Express + MySQL/Prisma).
 
-## Tech Stack
+## Project Structure
 
-- Node.js
-- Express.js
-- MySQL
-- Prisma ORM
-- JWT Authentication
-- Swagger API Docs
-
----
-
-## Installation
-
-```bash
-npm install
+```txt
+task-management-system/
+├── backend/          # Express API, Prisma, Socket.io
+│   ├── src/
+│   ├── prisma/
+│   ├── scripts/
+│   └── package.json
+├── frontend/         # React + Vite + Redux
+│   └── src/
+└── package.json      # Root scripts (orchestration)
 ```
 
----
-
-## Run Server
+## Setup
 
 ```bash
+# Install all dependencies
+npm run install:all
+
+# Configure backend environment
+cp backend/.env.example backend/.env
+# Edit backend/.env with your DATABASE_URL, JWT_SECRET, etc.
+```
+
+## Run
+
+From project root:
+
+```bash
+# Backend only (port 5000)
 npm run dev
+
+# Frontend only (port 5173)
+npm run dev:frontend
 ```
 
----
+Run both in separate terminals for full-stack development.
 
-## Environment Variables
+## Environment
 
-Create `.env` file:
+- **Backend:** `backend/.env`
+- **Frontend:** `frontend/.env` (optional — Vite proxy is recommended)
 
-```env
-PORT=5000
-JWT_SECRET=your_secret_key
-DATABASE_URL="mysql://root:@localhost:3306/task_management"
-```
+## API
 
----
-
-## API Base URL
-
-```txt
-http://localhost:5000/api/v1
-```
-
----
-
-## Features
-
-- JWT Authentication
-- Role Based Access Control
-- Task CRUD APIs
-- Validation Middleware
-- Prisma ORM Integration
-
----
-
-## Folder Structure
-
-```txt
-src/
-├── config/
-├── controllers/
-├── middleware/
-├── routes/
-├── services/
-├── utils/
-└── app.js
-```
+- Base URL: `http://localhost:5000/api`
+- Swagger docs: `http://localhost:5000/api-docs`
