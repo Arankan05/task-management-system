@@ -255,14 +255,25 @@ const addAttachment = async (req, res) => {
     if (!access.canManage && !access.canInteract) {
       return errorResponse(res, "Collaborators can only add attachments to tasks assigned to them", 403);
     }
-    if (!req.body.fileName || !req.body.fileUrl) {
-      return errorResponse(res, "File name and URL are required", 400);
+    const { fileName, fileUrl, fileType } = req.body;
+    if (!fileName || !fileUrl || !fileType) {
+      return errorResponse(res, "File name, URL, and type are required", 400);
     }
 
-    const attachment = await taskService.addAttachment(req.params.taskId, req.user.id, req.body);
+    const attachment = await taskService.addAttachment(req.params.taskId, req.user.id, {
+      fileName,
+      fileUrl,
+      fileType,
+    });
     return successResponse(res, "Attachment added", attachment, 201);
   } catch (error) {
+    console.error("ATTACHMENT ERROR:");
     console.error(error);
+
+    if (error.meta) {
+      console.error(error.meta);
+    }
+
     return errorResponse(res, "Failed to add attachment", 500);
   }
 };
