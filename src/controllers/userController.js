@@ -1,4 +1,5 @@
 const userService = require("../services/userService");
+const joinRequestService = require("../services/joinRequestService");
 const { successResponse, errorResponse } = require("../utils/response");
 
 const handleError = (res, error) => {
@@ -22,8 +23,17 @@ const createUser = async (req, res) => {
   try {
     const workspaceId = req.params.id;
     const { name, email, role } = req.body;
-    const user = await userService.createUser(workspaceId, { name, email, role });
-    return successResponse(res, "User created and welcome email sent", user, 201);
+    const joinRequest = await joinRequestService.createPendingWorkspaceUser(
+      workspaceId,
+      { name, email, role, invitedById: req.user.id },
+      req.app.get("io")
+    );
+    return successResponse(
+      res,
+      "Invitation sent. User must sign in with the temporary password (valid 24 hours) and accept the workspace request.",
+      joinRequest,
+      201
+    );
   } catch (error) {
     return handleError(res, error);
   }

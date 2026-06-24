@@ -130,7 +130,7 @@ function buildInvitationEmailHtml({ workspaceName, inviterName, role, inviteLink
 </html>`;
 }
 
-function buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl }) {
+function buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl, expiresInHours = 24 }) {
     return `
 <!DOCTYPE html>
 <html>
@@ -151,7 +151,8 @@ function buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl }) {
               <p style="margin:0 0 8px;color:#1E293B;font-size:15px;">Hi ${name || "there"},</p>
               <p style="margin:0 0 20px;color:#64748b;font-size:14px;line-height:1.6;">
                 An administrator created your TASKPULSE account. Sign in with the credentials below.
-                You will be required to set a new password on first login.
+                The temporary password is valid for <strong>${expiresInHours} hours</strong>.
+                After signing in, set a new password, then accept or reject the workspace invitation in your notifications.
               </p>
               <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:20px;">
                 <p style="margin:0 0 8px;color:#64748b;font-size:13px;"><strong>Username:</strong> ${emailAddress}</p>
@@ -175,7 +176,7 @@ function buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl }) {
 </html>`;
 }
 
-async function sendWelcomeUserEmail({ to, name, emailAddress, tempPassword }) {
+async function sendWelcomeUserEmail({ to, name, emailAddress, tempPassword, expiresInHours = 24 }) {
     if (!transporter) {
         throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
     }
@@ -186,8 +187,8 @@ async function sendWelcomeUserEmail({ to, name, emailAddress, tempPassword }) {
         from: `"TASKPULSE" <${EMAIL_USER}>`,
         to,
         subject: "Your TASKPULSE account has been created",
-        html: buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl }),
-        text: `Your TASKPULSE account was created. Username: ${emailAddress}. Temporary password: ${tempPassword}. Sign in at ${loginUrl} and you will be asked to set a new password.`,
+        html: buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl, expiresInHours }),
+        text: `Your TASKPULSE account was created. Username: ${emailAddress}. Temporary password: ${tempPassword} (valid ${expiresInHours} hours). Sign in at ${loginUrl}, set a new password, then accept or reject the workspace invitation in notifications.`,
     });
 }
 

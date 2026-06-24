@@ -109,7 +109,7 @@ const listMembers = async (req, res) => {
 const addMember = async (req, res) => {
   try {
     const { id } = req.params;
-    const { email, role = WORKSPACE_ROLES.COLLABORATOR } = req.body;
+    const { email, role = WORKSPACE_ROLES.COLLABORATOR, name } = req.body;
     const membership = await getWorkspaceMembership(req.user.id, id);
     if (!membership || !canManageMembers(membership.role)) {
       return errorResponse(res, "Only administrators can add members", 403);
@@ -119,12 +119,22 @@ const addMember = async (req, res) => {
       return errorResponse(res, "Invalid role", 400);
     }
 
-    const member = await workspaceService.addMember(id, email, role);
-    if (!member) return errorResponse(res, "User not found. They must register first.", 404);
-    return successResponse(res, "Member added", member, 201);
+    const { member, created, pending, joinRequest } = await workspaceService.addMember(
+      id,
+      { email, role, name, invitedById: req.user.id },
+      req.app.get("io")
+    );
+    let message = "Member added to workspace";
+    if (created && pending) {
+      message = "Invitation sent. User must sign in with the temporary password (valid 24 hours) and accept the workspace request.";
+    } else if (created) {
+      message = "User created and welcome email sent";
+    }
+    return successResponse(res, message, pending ? joinRequest : member, 201);
   } catch (error) {
     console.error(error);
-    return errorResponse(res, "Failed to add member", 500);
+    const status = error.status || 500;
+    return errorResponse(res, error.message || "Failed to add member", status);
   }
 };
 
