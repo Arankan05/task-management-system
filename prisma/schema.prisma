@@ -25,6 +25,7 @@ model User {
   resetOtpExpires     DateTime?
   resetOtpSendCount   Int               @default(0)
   resetOtpWindowStart DateTime?
+  notificationsOpenedAt DateTime?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 

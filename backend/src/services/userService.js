@@ -19,6 +19,7 @@ const USER_PUBLIC_SELECT = {
 const assertWorkspaceMember = async (workspaceId, userId) => {
   const member = await prisma.workspaceMember.findUnique({
     where: { workspaceId_userId: { workspaceId, userId } },
+    include: { user: { select: USER_PUBLIC_SELECT } },
   });
   if (!member) {
     const err = new Error("User is not a member of this workspace");
@@ -26,6 +27,11 @@ const assertWorkspaceMember = async (workspaceId, userId) => {
     throw err;
   }
   return member;
+};
+
+const getWorkspaceUser = async (workspaceId, userId) => {
+  const member = await assertWorkspaceMember(workspaceId, userId);
+  return { ...member.user, role: member.role };
 };
 
 const listUsers = async (workspaceId, { search, role, status }) => {
@@ -180,6 +186,7 @@ module.exports = {
   USER_PUBLIC_SELECT,
   listUsers,
   createUser,
+  getWorkspaceUser,
   updateUser,
   setUserActive,
 };
