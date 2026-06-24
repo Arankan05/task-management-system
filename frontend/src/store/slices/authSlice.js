@@ -27,20 +27,11 @@ export const logoutUser = createAsyncThunk(
 export const initializeAuth = createAsyncThunk(
   'auth/initialize',
   async (_, { rejectWithValue }) => {
-    const silent = { skipAuthRetry: true }
-
     try {
-      const { data } = await api.get('/auth/profile', silent)
-      return data.data
-    } catch (profileErr) {
-      if (profileErr.response?.status !== 401) {
+      const { data } = await api.get('/auth/session', { skipAuthRetry: true })
+      if (!data.data) {
         return rejectWithValue(null)
       }
-    }
-
-    try {
-      await api.post('/auth/refresh', null, silent)
-      const { data } = await api.get('/auth/profile', silent)
       return data.data
     } catch {
       return rejectWithValue(null)
