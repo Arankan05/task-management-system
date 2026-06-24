@@ -5,12 +5,12 @@ const validator = require("validator");
 const { successResponse, errorResponse } = require("../utils/response");
 const { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest, getTokenFromRequest } = require("../utils/authCookie");
 const {
-  signAccessToken,
-  createRefreshToken,
-  verifyRefreshToken,
-  revokeRefreshToken,
-  revokeAllUserRefreshTokens,
-  rotateRefreshToken,
+    signAccessToken,
+    createRefreshToken,
+    verifyRefreshToken,
+    revokeRefreshToken,
+    revokeAllUserRefreshTokens,
+    rotateRefreshToken,
 } = require("../services/authTokenService");
 const { sendPasswordResetOtp, OTP_EXPIRY_MINUTES } = require("../services/emailService");
 const { validatePassword } = require("../utils/passwordPolicy");
@@ -77,8 +77,12 @@ const registerUser = async (req, res) => {
             201
         );
     } catch (error) {
-        console.error(error);
-        return errorResponse(res, "Server Error", 500);
+        console.error("REGISTER ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: error.stack
+        });
     }
 };
 
