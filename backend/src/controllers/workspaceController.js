@@ -2,6 +2,10 @@ const workspaceService = require("../services/workspaceService");
 const projectService = require("../services/projectService");
 const taskService = require("../services/taskService");
 const { isWorkspaceMember, getWorkspaceMembership, assertCanManageTasks, getWorkspaceRole, getTaskListFiltersForRole } = require("../services/accessService");
+const {
+  notifyTaskAssigned,
+  notifyAdminUpdate,
+} = require("../services/notificationService");
 const { successResponse, errorResponse } = require("../utils/response");
 const {
   WORKSPACE_ROLES,
@@ -156,6 +160,13 @@ const updateMemberRole = async (req, res) => {
     }
 
     const member = await workspaceService.updateMemberRole(id, userId, role);
+    const io = req.app.get("io");
+    await notifyAdminUpdate(
+      io,
+      userId,
+      `Your role in "${workspace?.name}" was updated to ${role.replace(/_/g, " ")}`,
+      { workspaceId: id, role }
+    );
     return successResponse(res, "Role updated", member);
   } catch (error) {
     console.error(error);
@@ -177,6 +188,13 @@ const removeMember = async (req, res) => {
     }
 
     await workspaceService.removeMember(id, userId);
+    const io = req.app.get("io");
+    await notifyAdminUpdate(
+      io,
+      userId,
+      `You were removed from workspace "${workspace?.name}"`,
+      { workspaceId: id }
+    );
     return successResponse(res, "Member removed");
   } catch (error) {
     console.error(error);
@@ -232,6 +250,7 @@ const createTask = async (req, res) => {
 
     const io = req.app.get("io");
     io.to(`workspace:${id}`).emit("task:created", { task });
+    await notifyTaskAssigned(io, task, req.user.id, req.user?.name || req.user?.email);
 
     return successResponse(res, "Task created", task, 201);
   } catch (error) {

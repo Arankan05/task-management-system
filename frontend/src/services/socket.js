@@ -7,6 +7,8 @@ let storeRef = null
 let listenersAttached = false
 let connectionWarningShown = false
 let activeProjectId = null
+const notificationListeners = new Set()
+const notificationReconnectListeners = new Set()
 
 function attachListeners() {
   if (!socket || !storeRef || listenersAttached) return
@@ -16,6 +18,7 @@ function attachListeners() {
     const user = storeRef.getState().auth?.user
     if (user?.id) socket.emit('join:user', user.id)
     if (activeProjectId) socket.emit('join:project', activeProjectId)
+    notificationReconnectListeners.forEach((handler) => handler())
   })
 
   socket.on('connect_error', () => {
@@ -23,6 +26,10 @@ function attachListeners() {
       console.warn('[TASKPULSE] Real-time connection failed. Start backend: npm run dev')
       connectionWarningShown = true
     }
+  })
+
+  socket.on('notification:new', (notification) => {
+    notificationListeners.forEach((handler) => handler(notification))
   })
 
   const handleTaskEvent = (type) => (payload) => {
@@ -46,6 +53,16 @@ function attachListeners() {
 
 export function setupSocket(store) {
   storeRef = store
+}
+
+/** Subscribe to real-time notifications (dedupe in UI). Returns unsubscribe. */
+export function subscribeNotifications({ onNew, onReconnect } = {}) {
+  if (onNew) notificationListeners.add(onNew)
+  if (onReconnect) notificationReconnectListeners.add(onReconnect)
+  return () => {
+    if (onNew) notificationListeners.delete(onNew)
+    if (onReconnect) notificationReconnectListeners.delete(onReconnect)
+  }
 }
 
 export const joinProjectRoom = (projectId) => {

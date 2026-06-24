@@ -8,10 +8,17 @@ const {
   getTaskListFiltersForRole,
 } = require("../services/accessService");
 const { successResponse, errorResponse } = require("../utils/response");
+const {
+  notifyTaskAssigned,
+  notifyTaskStatusChanged,
+  notifyTaskComment,
+} = require("../services/notificationService");
 
 const emitProjectUsers = (io, projectId, event, payload) => {
   io.to(`project:${projectId}`).emit(event, payload);
 };
+
+const actorName = (req) => req.user?.name || req.user?.email || "Someone";
 
 const denyTaskAccess = (res, access) => {
   if (!access.task) return errorResponse(res, access.message || "Task not found", 404);
@@ -69,6 +76,7 @@ const createTask = async (req, res) => {
 
     const io = req.app.get("io");
     emitProjectUsers(io, projectId, "task:created", { task });
+    await notifyTaskAssigned(io, task, req.user.id, actorName(req));
 
     return successResponse(res, "Task created", task, 201);
   } catch (error) {
@@ -102,6 +110,14 @@ const updateTask = async (req, res) => {
     const io = req.app.get("io");
     emitProjectUsers(io, access.task.projectId, "task:updated", { task: updated });
 
+    if (req.body.assignedToId && req.body.assignedToId !== access.task.assignedToId) {
+      await notifyTaskAssigned(io, updated, req.user.id, actorName(req));
+    }
+
+    if (req.body.status && req.body.status !== access.task.status) {
+      await notifyTaskStatusChanged(io, updated, req.user.id, actorName(req), req.body.status);
+    }
+
     return successResponse(res, "Task updated", updated);
   } catch (error) {
     console.error(error);
@@ -133,6 +149,7 @@ const updateTaskStatus = async (req, res) => {
 
     const io = req.app.get("io");
     emitProjectUsers(io, access.task.projectId, "task:updated", { task: updated });
+    await notifyTaskStatusChanged(io, updated, req.user.id, actorName(req), status);
 
     return successResponse(res, "Status updated", updated);
   } catch (error) {
@@ -240,6 +257,10 @@ const addComment = async (req, res) => {
     const comment = await taskService.addComment(req.params.taskId, req.user.id, req.body.content);
     const io = req.app.get("io");
     io.to(`task:${req.params.taskId}`).emit("comment:added", comment);
+
+    if (access.task?.assignedToId || access.task?.createdById) {
+      await notifyTaskComment(io, access.task, req.user.id, actorName(req));
+    }
 
     return successResponse(res, "Comment added", comment, 201);
   } catch (error) {

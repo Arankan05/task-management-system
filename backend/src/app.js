@@ -16,6 +16,7 @@ const invitationRoutes = require("./routes/invitationRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const joinRequestRoutes = require("./routes/joinRequestRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
+const { startDeadlineChecker } = require("./services/notificationService");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
 const initsocketHandler = require("./socket/socketHandler");
@@ -70,4 +71,5 @@ const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  startDeadlineChecker(io);
 });

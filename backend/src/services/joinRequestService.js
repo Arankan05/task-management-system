@@ -3,8 +3,8 @@ const prisma = require("../config/db");
 const { generateTempPassword } = require("../utils/passwordPolicy");
 const { sendWelcomeUserEmail } = require("./emailService");
 const { revokeAllUserRefreshTokens } = require("./authTokenService");
-const { VALID_ROLES } = require("../utils/workspaceRoles");
-const { ROLE_LABELS } = require("../utils/workspaceRoles");
+const { VALID_ROLES, ROLE_LABELS } = require("../utils/workspaceRoles");
+const { notifyAdminUpdate } = require("./notificationService");
 const EVENTS = require("../socket/events");
 
 const JOIN_STATUS = {
@@ -164,7 +164,7 @@ const getJoinRequestForUser = async (requestId, userId) => {
   return request;
 };
 
-const acceptJoinRequest = async (requestId, userId) => {
+const acceptJoinRequest = async (requestId, userId, io = null) => {
   await expireStaleRequests();
 
   const request = await getJoinRequestForUser(requestId, userId);
@@ -219,10 +219,21 @@ const acceptJoinRequest = async (requestId, userId) => {
     }),
   ]);
 
+  if (request.invitedById && request.invitedById !== userId) {
+    const userName = request.user?.name || request.user?.email || "A user";
+    const workspaceName = request.workspace?.name || "the workspace";
+    await notifyAdminUpdate(
+      io,
+      request.invitedById,
+      `${userName} accepted your invitation to "${workspaceName}"`,
+      { workspaceId: request.workspaceId, requestId, userId }
+    );
+  }
+
   return member;
 };
 
-const rejectJoinRequest = async (requestId, userId) => {
+const rejectJoinRequest = async (requestId, userId, io = null) => {
   await expireStaleRequests();
 
   const request = await getJoinRequestForUser(requestId, userId);
@@ -247,6 +258,17 @@ const rejectJoinRequest = async (requestId, userId) => {
       data: { isRead: true },
     }),
   ]);
+
+  if (request.invitedById && request.invitedById !== userId) {
+    const userName = request.user?.name || request.user?.email || "A user";
+    const workspaceName = request.workspace?.name || "the workspace";
+    await notifyAdminUpdate(
+      io,
+      request.invitedById,
+      `${userName} rejected your invitation to "${workspaceName}"`,
+      { workspaceId: request.workspaceId, requestId, userId }
+    );
+  }
 
   return { id: requestId, status: JOIN_STATUS.REJECTED };
 };

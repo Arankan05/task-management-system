@@ -5,12 +5,17 @@ export const getNotifications = async () => {
   return data.data
 }
 
+export const acknowledgeNotificationsOpen = async () => {
+  const { data } = await api.patch('/notifications/open')
+  return data.data
+}
+
 export const markNotificationRead = async (id) => {
   const { data } = await api.patch(`/notifications/${id}/read`)
   return data.data
 }
 
-export const markAllNotificationsRead = async () => {
-  const { data } = await api.patch('/notifications/read-all')
+export const clearAllNotifications = async () => {
+  const { data } = await api.delete('/notifications')
   return data
 }

@@ -1,6 +1,6 @@
 const prisma = require("../config/db");
 const EVENTS = require("../socket/events");
-const { sendNotification } = require("../services/notificationService");
+const { notifyTaskComment } = require("../services/notificationService");
 const { successResponse, errorResponse } = require("../utils/response");
 
 // POST /api/tasks/:taskId/comments — add a comment to a task
@@ -15,17 +15,12 @@ const addComment = async (req, res) => {
       include: { user: { select: { id: true, name: true } } },
     });
 
-    // Emit to everyone viewing this task in real time
     io.to(`task:${taskId}`).emit(EVENTS.NEW_COMMENT, comment);
 
-    // Notify the assigned user if someone else commented
     const task = await prisma.task.findUnique({ where: { id: taskId } });
-    if (task?.assignedUserId && task.assignedUserId !== req.user.id) {
-      await sendNotification(io, {
-        userId: task.assignedUserId,
-        type: "NEW_COMMENT",
-        message: `New comment on task: ${task.title}`,
-      });
+    if (task) {
+      const actorName = req.user?.name || req.user?.email || "Someone";
+      await notifyTaskComment(io, task, req.user.id, actorName);
     }
 
     return successResponse(res, "Comment added", comment, 201);
