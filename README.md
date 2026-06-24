@@ -6,9 +6,10 @@ Full-stack MERN-style application (React + Express + MySQL/Prisma).
 
 ```txt
 task-management-system/
-├── backend/          # Express API, Prisma, Socket.io
+├── prisma/           # Database schema & migrations (shared)
+├── prisma.config.ts
+├── backend/          # Express API, Socket.io
 │   ├── src/
-│   ├── prisma/
 │   ├── scripts/
 │   └── package.json
 ├── frontend/         # React + Vite + Redux
@@ -50,3 +51,5 @@ Run both in separate terminals for full-stack development.
 
 - Base URL: `http://localhost:5000/api`
 - Swagger docs: `http://localhost:5000/api-docs`
+
+port killer - taskkill /PID 16220 /F
