@@ -1,7 +1,8 @@
 const prisma = require("../config/db");
 const projectService = require("./projectService");
 const joinRequestService = require("./joinRequestService");
-const { WORKSPACE_ROLES, VALID_ROLES } = require("../utils/workspaceRoles");
+const { notifyAdminUpdate } = require("./notificationService");
+const { WORKSPACE_ROLES, VALID_ROLES, ROLE_LABELS } = require("../utils/workspaceRoles");
 const { DEFAULT_PROJECT_NAME } = require("./projectService");
 
 const workspaceInclude = {
@@ -126,6 +127,18 @@ const addMember = async (workspaceId, { email, role = WORKSPACE_ROLES.COLLABORAT
       data: { workspaceId, userId: user.id, role },
       include: { user: { select: memberUserSelect } },
     });
+
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { name: true },
+    });
+    const roleLabel = ROLE_LABELS[role] || role.replace(/_/g, " ");
+    await notifyAdminUpdate(
+      io,
+      user.id,
+      `You were added to workspace "${workspace?.name}" as ${roleLabel}`,
+      { workspaceId, role }
+    );
 
     return { member, created: false };
   }

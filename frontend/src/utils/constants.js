@@ -57,3 +57,12 @@ export const INVITATION_STATUS_LABELS = {
 }
 
 export { WORKSPACE_ROLES, WORKSPACE_ROLE_LABELS }
+
+export const NOTIFICATION_TYPE_LABELS = {
+  TASK_ASSIGNED: 'Task assigned',
+  TASK_STATUS_CHANGED: 'Status changed',
+  TASK_COMMENT: 'New comment',
+  TASK_DEADLINE: 'Deadline reminder',
+  ADMIN_UPDATE: 'Admin update',
+  WORKSPACE_JOIN_REQUEST: 'Workspace invitation',
+}
