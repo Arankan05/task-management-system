@@ -3,13 +3,14 @@ const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const {
   getNotifications,
-  markAsRead,
-  markAllRead,
+  acknowledgeOpen,
+  markNotificationRead,
+  clearAllNotifications,
 } = require("../controllers/notificationController");
 
-// All routes here require the user to be logged in (authMiddleware checks the JWT token)
-router.get("/",            authMiddleware, getNotifications);
-router.patch("/:id/read",  authMiddleware, markAsRead);
-router.patch("/read-all",  authMiddleware, markAllRead);
+router.get("/", authMiddleware, getNotifications);
+router.patch("/open", authMiddleware, acknowledgeOpen);
+router.patch("/:id/read", authMiddleware, markNotificationRead);
+router.delete("/", authMiddleware, clearAllNotifications);
 
 module.exports = router;
