@@ -10,8 +10,7 @@ require("dotenv").config();
 const authRoutes = require("./routes/authRoutes");
 const workspaceRoutes = require("./routes/workspaceRoutes");
 const projectNestedRoutes = require("./routes/projectRoutes");
-const projectRoutes = require("./routes/projectRoutes");
-const taskRoutes = require("./routes/taskRoutes");
+const projectRoutes = require("./routes/taskRoutes");
 const invitationRoutes = require("./routes/invitationRoutes");
 
 const errorMiddleware = require("./middleware/errorMiddleware");
@@ -50,7 +49,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/workspaces/:workspaceId/projects", projectNestedRoutes);
 app.use("/api/projects", projectRoutes);
-app.use("/api/tasks", taskRoutes);
 app.use("/api/invitations", invitationRoutes);
 
 // Swagger Docs
