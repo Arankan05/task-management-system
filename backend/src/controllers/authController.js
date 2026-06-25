@@ -51,6 +51,12 @@ const registerUser = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
+        const sanitizedName = name ? name.replace(/<[^>]*>/g, "").trim() : "";
+
+        if (!sanitizedName) {
+        return errorResponse(res, "Name is required", 400);
+        }
+
         const existingUser = await prisma.user.findUnique({
             where: { email },
         });
@@ -63,7 +69,7 @@ const registerUser = async (req, res) => {
 
         const user = await prisma.user.create({
             data: {
-                name,
+                name: sanitizedName,
                 email,
                 password: hashedPassword,
             },
