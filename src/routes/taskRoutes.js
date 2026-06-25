@@ -5,8 +5,12 @@ const ensurePasswordChanged = require("../middleware/ensurePasswordChanged");
 const projectCtrl = require("../controllers/projectController");
 const taskCtrl = require("../controllers/taskController");
 
+const s3Ctrl = require("../controllers/s3Controller");
+
 router.use(auth);
 router.use(ensurePasswordChanged);
+
+router.get("/attachments/presigned-url", s3Ctrl.getPresignedUrl);
 
 router.get("/:id", projectCtrl.getProject);
 router.put("/:id", projectCtrl.updateProject);

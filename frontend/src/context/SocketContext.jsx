@@ -6,29 +6,29 @@ const SocketContext = createContext(null);
 
 /**
  * SocketProvider manages the lifecycle of the socket connection,
- * ensuring it only connects when a user is authenticated (token exists)
+ * ensuring it only connects when a user is authenticated
  * and properly cleans up to avoid duplicate sockets or memory leaks.
  */
 export const SocketProvider = ({ children }) => {
-    const { token } = useAuth();
+    const { user } = useAuth();
     const [socket, setSocket] = useState(null);
 
     useEffect(() => {
-        // If there's no auth token, don't initiate a socket connection
-        // if (!token) {
-        //     setSocket(null);
-        //     return;
-        // }
+        // If there's no authenticated user, don't initiate a socket connection
+        if (!user) {
+            setSocket(null);
+            return;
+        }
 
-        const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        let backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        if (backendUrl.endsWith("/api")) {
+            backendUrl = backendUrl.slice(0, -4);
+        }
         console.log(`Initializing Socket.IO client, connecting to: ${backendUrl}`);
 
         const socketInstance = io(backendUrl, {
-            auth: {
-                token: token
-            },
+            withCredentials: true,
             autoConnect: true,
-            // Reconnection rules
             reconnection: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000
@@ -48,13 +48,13 @@ export const SocketProvider = ({ children }) => {
             console.log("WebSocket client disconnected. Reason:", reason);
         });
 
-        // Cleanup function executed when component unmounts or token changes
+        // Cleanup function executed when component unmounts or user changes
         return () => {
             console.log("Cleaning up WebSocket client...");
             socketInstance.disconnect();
             setSocket(null);
         };
-    }, [token]);
+    }, [user]);
 
     return (
         <SocketContext.Provider value={socket}>

@@ -64,7 +64,7 @@ const listUsers = async (workspaceId, { search, role, status }) => {
   }));
 };
 
-const createUser = async (workspaceId, { name, email, role }) => {
+const createUser = async (workspaceId, { name, email, role }, actorId) => {
   if (!VALID_ROLES.includes(role)) {
     const err = new Error("Invalid role");
     err.status = 400;
@@ -81,9 +81,15 @@ const createUser = async (workspaceId, { name, email, role }) => {
       err.status = 409;
       throw err;
     }
-    const err = new Error("A user with this email already exists");
-    err.status = 409;
-    throw err;
+    // If the user already exists in the system but is not in the workspace, send an invitation
+    const invitationService = require("./invitationService");
+    const invitation = await invitationService.createInvitation({
+      workspaceId,
+      email,
+      role,
+      invitedById: actorId,
+    });
+    return { isInvitation: true, invitation };
   }
 
   const tempPassword = generateTempPassword();

@@ -69,6 +69,20 @@ const createTask = async (req, res) => {
 
     const io = req.app.get("io");
     emitProjectUsers(io, projectId, "task:created", { task });
+    if (project.workspaceId) {
+      io.to(`workspace:${project.workspaceId}`).emit("task:created", { task });
+    }
+
+    // Send task assignment notification
+    if (assignedToId && assignedToId !== req.user.id) {
+      const { sendNotification } = require("../services/notificationService");
+      await sendNotification(io, {
+        userId: assignedToId,
+        type: "TASK_ASSIGNED",
+        message: `You have been assigned to task: ${task.title}`,
+        data: { taskId: task.id, projectId },
+      }).catch((err) => console.error("Notification error:", err));
+    }
 
     return successResponse(res, "Task created", task, 201);
   } catch (error) {
@@ -101,6 +115,20 @@ const updateTask = async (req, res) => {
     const updated = await taskService.updateTask(req.params.id, req.body);
     const io = req.app.get("io");
     emitProjectUsers(io, access.task.projectId, "task:updated", { task: updated });
+    if (access.task.project?.workspaceId) {
+      io.to(`workspace:${access.task.project.workspaceId}`).emit("task:updated", { task: updated });
+    }
+
+    // Send task assignment notification if assignee changed
+    if (req.body.assignedToId && req.body.assignedToId !== req.user.id && req.body.assignedToId !== access.task.assignedToId) {
+      const { sendNotification } = require("../services/notificationService");
+      await sendNotification(io, {
+        userId: req.body.assignedToId,
+        type: "TASK_ASSIGNED",
+        message: `You have been assigned to task: ${updated.title}`,
+        data: { taskId: updated.id, projectId: updated.projectId },
+      }).catch((err) => console.error("Notification error:", err));
+    }
 
     return successResponse(res, "Task updated", updated);
   } catch (error) {
@@ -133,6 +161,9 @@ const updateTaskStatus = async (req, res) => {
 
     const io = req.app.get("io");
     emitProjectUsers(io, access.task.projectId, "task:updated", { task: updated });
+    if (access.task.project?.workspaceId) {
+      io.to(`workspace:${access.task.project.workspaceId}`).emit("task:updated", { task: updated });
+    }
 
     return successResponse(res, "Status updated", updated);
   } catch (error) {
@@ -152,6 +183,9 @@ const deleteTask = async (req, res) => {
     await taskService.deleteTask(req.params.id);
     const io = req.app.get("io");
     emitProjectUsers(io, access.task.projectId, "task:deleted", { taskId: req.params.id });
+    if (access.task.project?.workspaceId) {
+      io.to(`workspace:${access.task.project.workspaceId}`).emit("task:deleted", { taskId: req.params.id });
+    }
 
     return successResponse(res, "Task deleted");
   } catch (error) {
@@ -241,6 +275,26 @@ const addComment = async (req, res) => {
     const io = req.app.get("io");
     io.to(`task:${req.params.taskId}`).emit("comment:added", comment);
 
+    // Send comment notifications to assignee and creator
+    const task = access.task;
+    const recipients = new Set();
+    if (task.assignedToId && task.assignedToId !== req.user.id) {
+      recipients.add(task.assignedToId);
+    }
+    if (task.createdById && task.createdById !== req.user.id) {
+      recipients.add(task.createdById);
+    }
+
+    const { sendNotification } = require("../services/notificationService");
+    for (const recipientId of recipients) {
+      await sendNotification(io, {
+        userId: recipientId,
+        type: "NEW_COMMENT",
+        message: `New comment on task "${task.title}" by ${req.user.name || "a teammate"}`,
+        data: { taskId: task.id, commentId: comment.id },
+      }).catch((err) => console.error("Notification error:", err));
+    }
+
     return successResponse(res, "Comment added", comment, 201);
   } catch (error) {
     console.error(error);
@@ -265,6 +319,29 @@ const addAttachment = async (req, res) => {
       fileUrl,
       fileType,
     });
+
+    const io = req.app.get("io");
+    io.to(`task:${req.params.taskId}`).emit("attachment:new", attachment);
+
+    // Send attachment notifications to assignee and creator
+    const task = access.task;
+    const recipients = new Set();
+    if (task.assignedToId && task.assignedToId !== req.user.id) {
+      recipients.add(task.assignedToId);
+    }
+    if (task.createdById && task.createdById !== req.user.id) {
+      recipients.add(task.createdById);
+    }
+
+    const { sendNotification } = require("../services/notificationService");
+    for (const recipientId of recipients) {
+      await sendNotification(io, {
+        userId: recipientId,
+        type: "NEW_ATTACHMENT",
+        message: `New attachment "${fileName}" added to task "${task.title}"`,
+        data: { taskId: task.id, attachmentId: attachment.id },
+      }).catch((err) => console.error("Notification error:", err));
+    }
     return successResponse(res, "Attachment added", attachment, 201);
   } catch (error) {
     console.error("ATTACHMENT ERROR:");

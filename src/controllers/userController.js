@@ -22,8 +22,13 @@ const createUser = async (req, res) => {
   try {
     const workspaceId = req.params.id;
     const { name, email, role } = req.body;
-    const user = await userService.createUser(workspaceId, { name, email, role });
-    return successResponse(res, "User created and welcome email sent", user, 201);
+    const result = await userService.createUser(workspaceId, { name, email, role }, req.user.id);
+    
+    if (result.isInvitation) {
+      return successResponse(res, "User already exists. Workspace invitation sent.", result.invitation, 201);
+    }
+    
+    return successResponse(res, "User created and welcome email sent", result, 201);
   } catch (error) {
     return handleError(res, error);
   }

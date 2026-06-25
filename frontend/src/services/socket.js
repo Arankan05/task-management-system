@@ -1,6 +1,9 @@
 import { io } from 'socket.io-client'
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || undefined
+let SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:5000'
+if (SOCKET_URL && SOCKET_URL.endsWith('/api')) {
+  SOCKET_URL = SOCKET_URL.slice(0, -4)
+}
 
 let socket = null
 let storeRef = null

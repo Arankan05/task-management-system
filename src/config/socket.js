@@ -1,4 +1,4 @@
-const onlineUsers = new Set();
+const initSocketHandler = require("../socket/socketHandler");
 const { Server } = require("socket.io");
 
 let io = null;
@@ -6,7 +6,7 @@ let io = null;
 /**
  * Initialize Socket.IO server
  * @param {import("http").Server} server - The HTTP server instance wrapper
- * @returns {Server} The initialized Socket.IO server instance
+ * @returns {import("socket.io").Server} The initialized Socket.IO server instance
  */
 const initSocket = (server) => {
     if (io) {
@@ -24,47 +24,15 @@ const initSocket = (server) => {
 
     console.log("Socket.IO server initialized successfully.");
 
-    // Setup base event listeners
-    io.on("connection", (socket) => {
-        onlineUsers.add(socket.id);
-
-        io.emit("online-users", Array.from(onlineUsers));
-
-        console.log("🟢 User connected:", socket.id);
-        console.log(`User connected: ${socket.id}`);
-
-        // Handle client disconnection
-        socket.on("disconnect", () => {
-
-            onlineUsers.delete(socket.id);
-
-            io.emit("online-users", Array.from(onlineUsers));
-
-            console.log("⚫ User disconnected:", socket.id);
-
-        });
-
-        socket.on("typing", (username) => {
-
-            socket.broadcast.emit("user-typing", username);
-
-        });
-
-        socket.on("join-room", (roomName) => {
-
-            socket.join(roomName);
-
-            console.log(`${socket.id} joined ${roomName}`);
-
-        });
-    });
+    // Delegate authorization and socket events to socketHandler
+    initSocketHandler(io);
 
     return io;
 };
 
 /**
  * Get active Socket.IO server instance
- * @returns {Server}
+ * @returns {import("socket.io").Server}
  */
 const getIO = () => {
     if (!io) {
@@ -77,5 +45,3 @@ module.exports = {
     initSocket,
     getIO
 };
-
-

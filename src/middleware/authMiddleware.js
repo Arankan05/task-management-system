@@ -5,6 +5,13 @@ const { getTokenFromRequest } = require("../utils/authCookie");
 const authMiddleware = (req, res, next) => {
   const token = getTokenFromRequest(req);
 
+  console.log("===== AUTH DEBUG =====");
+  console.log("Request URL:", req.originalUrl);
+  console.log("Cookie Header:", req.headers.cookie);
+  console.log("Parsed Cookies:", req.cookies);
+  console.log("Token:", token);
+  console.log("======================");
+
   if (!token) {
     return errorResponse(
       res,

@@ -23,6 +23,8 @@ const getRefreshCookieOptions = () => ({
 const setAuthCookies = (res, accessToken, refreshToken) => {
   res.cookie(ACCESS_COOKIE, accessToken, getAccessCookieOptions());
   res.cookie(REFRESH_COOKIE, refreshToken, getRefreshCookieOptions());
+  console.log("Setting access cookie:", ACCESS_COOKIE);
+  console.log("Access token length:", accessToken.length);
 };
 
 const clearAuthCookies = (res) => {
