@@ -40,6 +40,10 @@ function ProfileAvatar({ user, size = 'md', onClick, className = '' }) {
         <img
           src={user.profilePhoto}
           alt={user?.name || 'Profile'}
+          loading="lazy"
+          decoding="async"
+          width={size === 'xl' ? 112 : size === 'lg' ? 80 : size === 'md' ? 40 : 32}
+          height={size === 'xl' ? 112 : size === 'lg' ? 80 : size === 'md' ? 40 : 32}
           className="w-full h-full object-cover"
         />
       ) : (

@@ -6,6 +6,9 @@ export const normalizeWorkspaceRole = (role) => {
   return role
 }
 
+export const canManageWorkspace = (role) =>
+  normalizeWorkspaceRole(role) === WORKSPACE_ROLES.ADMINISTRATOR
+
 export const canManageTeam = (role) =>
   normalizeWorkspaceRole(role) === WORKSPACE_ROLES.ADMINISTRATOR
 

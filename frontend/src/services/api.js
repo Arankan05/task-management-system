@@ -10,7 +10,7 @@ const api = axios.create({
 let storeRef = null
 let refreshPromise = null
 
-const AUTH_SKIP_REFRESH = ['/auth/login', '/auth/logout', '/auth/refresh', '/auth/register']
+const AUTH_SKIP_REFRESH = ['/auth/login', '/auth/logout', '/auth/refresh', '/auth/register', '/auth/session']
 
 const shouldSkipRefresh = (url = '') =>
   AUTH_SKIP_REFRESH.some((path) => url.includes(path))
@@ -41,7 +41,8 @@ export function setupApiInterceptors(store) {
       }
 
       if (
-        status !== 401
+        originalRequest.skipAuthRetry
+        || status !== 401
         || !originalRequest
         || originalRequest._retry
         || shouldSkipRefresh(requestUrl)
