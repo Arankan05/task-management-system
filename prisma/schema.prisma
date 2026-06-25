@@ -56,7 +56,8 @@ model Workspace {
   members     WorkspaceMember[]
   projects    Project[]
   invitations WorkspaceInvitation[]
-  joinRequests WorkspaceJoinRequest[]
+
+  @@index([ownerId])
 }
 
 model WorkspaceMember {
@@ -70,6 +71,8 @@ model WorkspaceMember {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
+  @@index([userId])
+  @@index([workspaceId])
 }
 
 model WorkspaceInvitation {
@@ -142,6 +145,9 @@ model Project {
   createdBy   User      @relation("ProjectCreator", fields: [createdById], references: [id])
   tasks       Task[]
   labels      Label[]
+
+  @@index([workspaceId])
+  @@index([createdById])
 }
 
 model Label {
@@ -175,6 +181,12 @@ model Task {
   labels       TaskLabel[]
   comments     Comment[]
   attachments  Attachment[]
+
+  @@index([projectId])
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([status])
+  @@index([priority])
 }
 
 model TaskLabel {
@@ -195,6 +207,9 @@ model Comment {
 
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
+
+  @@index([taskId])
+  @@index([userId])
 }
 
 model Attachment {
@@ -208,6 +223,8 @@ model Attachment {
 
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
+
+  @@index([taskId])
 }
 
 model RefreshToken {
