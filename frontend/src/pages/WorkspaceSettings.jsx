@@ -6,9 +6,10 @@ import Layout from '../components/Layout'
 import PageHeader from '../components/ui/PageHeader'
 import Loader from '../components/ui/Loader'
 import Alert from '../components/ui/Alert'
-import { getWorkspace, updateWorkspace, deleteWorkspace } from '../services/workspaceService'
+import { getWorkspace, getWorkspaceMembers, updateWorkspace, deleteWorkspace } from '../services/workspaceService'
 import { fetchWorkspaces } from '../store/slices/workspacesSlice'
 import { WORKSPACE_COLORS } from '../utils/constants'
+import { canManageWorkspace, getMyWorkspaceRole } from '../utils/permissions'
 
 function WorkspaceSettings() {
   const { workspaceId } = useParams()
@@ -17,6 +18,7 @@ function WorkspaceSettings() {
   const { user } = useSelector((s) => s.auth)
 
   const [workspace, setWorkspace] = useState(null)
+  const [myRole, setMyRole] = useState(null)
   const [form, setForm] = useState({ name: '', description: '', color: WORKSPACE_COLORS[0] })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -24,9 +26,10 @@ function WorkspaceSettings() {
   const [success, setSuccess] = useState('')
 
   useEffect(() => {
-    getWorkspace(workspaceId)
-      .then((ws) => {
+    Promise.all([getWorkspace(workspaceId), getWorkspaceMembers(workspaceId)])
+      .then(([ws, members]) => {
         setWorkspace(ws)
+        setMyRole(getMyWorkspaceRole(members, user?.id))
         setForm({
           name: ws.name || '',
           description: ws.description || '',
@@ -35,7 +38,7 @@ function WorkspaceSettings() {
       })
       .catch(() => setError('Failed to load workspace settings'))
       .finally(() => setLoading(false))
-  }, [workspaceId])
+  }, [workspaceId, user?.id])
 
   const isOwner = workspace?.ownerId === user?.id
 
@@ -71,6 +74,19 @@ function WorkspaceSettings() {
     return <Layout><div className="flex justify-center py-20"><Loader /></div></Layout>
   }
 
+  if (!canManageWorkspace(myRole)) {
+    return (
+      <Layout>
+        <div className="page-container max-w-3xl">
+          <Alert
+            message="Only workspace administrators can access settings."
+            type="error"
+          />
+        </div>
+      </Layout>
+    )
+  }
+
   return (
     <Layout>
       <div className="page-container max-w-3xl">
@@ -99,7 +115,7 @@ function WorkspaceSettings() {
             <div className="space-y-4">
               <div>
                 <label className="label-field">Workspace name</label>
-                <input className="input-field" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                <input className="input-field" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </div>
               <div>
                 <label className="label-field">Description</label>

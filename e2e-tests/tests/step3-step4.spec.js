@@ -63,15 +63,19 @@ test('Step 3: Expired session redirects to login', async ({ page, context }) => 
   }
 })
 
-test('Step 3: Collaborator blocked from admin workspace settings', async ({ page }) => {
+test('Step 3: Collaborator blocked from admin workspace settings', async ({ browser }) => {
   const scenario = 'Collaborator opens admin-only page'
+  const adminContext = await browser.newContext()
+  const collabContext = await browser.newContext()
+  const adminPage = await adminContext.newPage()
+  const collabPage = await collabContext.newPage()
   try {
-    const admin = await registerAndLogin(page)
-    const { workspaceId, name } = await createWorkspace(page)
+    await registerAndLogin(adminPage)
+    const { workspaceId } = await createWorkspace(adminPage)
 
     const collabEmail = `collab_${Date.now()}@taskpulse.test`
     const collabPassword = 'Test@12345'
-    const reg = await page.request.post('http://localhost:5000/api/auth/register', {
+    const reg = await adminPage.request.post('http://localhost:5000/api/auth/register', {
       data: { name: 'Collab User', email: collabEmail, password: collabPassword },
     })
     if (!reg.ok()) {
@@ -80,30 +84,45 @@ test('Step 3: Collaborator blocked from admin workspace settings', async ({ page
       return
     }
 
-    await page.request.post(`http://localhost:5000/api/workspaces/${workspaceId}/members`, {
+    const memberRes = await adminPage.request.post(`http://localhost:5000/api/workspaces/${workspaceId}/members`, {
       data: { email: collabEmail, role: 'COLLABORATOR', name: 'Collab User' },
     })
+    if (!memberRes.ok()) {
+      record('Step 3', scenario, 'Blocked or hidden', `Could not add collaborator: ${memberRes.status()}`, 'SKIP')
+      test.skip()
+      return
+    }
 
-    await page.goto('/login')
-    await page.getByPlaceholder('you@company.com').fill(collabEmail)
-    await page.getByPlaceholder('••••••••').fill(collabPassword)
-    await page.getByRole('button', { name: 'Sign In' }).click()
-    await page.waitForURL('**/workspaces**', { timeout: 15_000 })
+    await collabPage.goto('/login')
+    await collabPage.getByPlaceholder('you@company.com').fill(collabEmail)
+    await collabPage.getByPlaceholder('••••••••').fill(collabPassword)
+    await collabPage.getByRole('button', { name: 'Sign In' }).click()
+    await collabPage.waitForURL('**/workspaces**', { timeout: 15_000 })
 
-    await page.goto(`/workspaces/${workspaceId}/settings`)
-    const forbidden = page.getByText(/access denied|not authorized|permission|forbidden|only administrators/i)
-    const deleteBtn = page.getByRole('button', { name: /delete workspace/i })
+    await collabPage.goto(`/workspaces/${workspaceId}/settings`)
+    const forbidden = collabPage.getByText(/access denied|not authorized|permission|forbidden|only administrators|only workspace administrators/i)
+    const deleteBtn = collabPage.getByRole('button', { name: /delete workspace/i })
+    const saveBtn = collabPage.getByRole('button', { name: /save changes/i })
+    const settingsForm = collabPage.getByRole('heading', { name: /workspace settings/i })
     const blocked = await forbidden.isVisible().catch(() => false)
-    const hidden = !(await deleteBtn.isVisible().catch(() => false))
-    if (blocked || hidden) {
-      record('Step 3', scenario, 'Blocked or hidden', blocked ? 'Access denied message' : 'Admin actions hidden', 'PASS')
+    const deleteHidden = !(await deleteBtn.isVisible().catch(() => false))
+    const formHidden = !(await settingsForm.isVisible().catch(() => false))
+    const saveHidden = !(await saveBtn.isVisible().catch(() => false))
+    if (blocked || (deleteHidden && formHidden)) {
+      record('Step 3', scenario, 'Blocked or hidden', blocked ? 'Access denied message' : 'Admin page hidden', 'PASS')
+    } else if (deleteHidden && !formHidden) {
+      record('Step 3', scenario, 'Blocked or hidden', 'Collaborator can open settings & edit (only delete hidden)', 'FAIL')
+      expect(blocked || formHidden).toBeTruthy()
     } else {
-      record('Step 3', scenario, 'Blocked or hidden', 'Collaborator can see admin delete workspace', 'FAIL')
-      expect(blocked || hidden).toBeTruthy()
+      record('Step 3', scenario, 'Blocked or hidden', 'Collaborator sees full admin settings incl. delete', 'FAIL')
+      expect(blocked || deleteHidden).toBeTruthy()
     }
   } catch (e) {
     record('Step 3', scenario, 'Blocked or hidden', e.message, 'FAIL')
     throw e
+  } finally {
+    await adminContext.close()
+    await collabContext.close()
   }
 })
 
@@ -231,31 +250,16 @@ test('Step 4: Task form empty title', async ({ page }) => {
   }
 })
 
-test('Step 4: Profile invalid email', async ({ page }) => {
+test('Step 4: Profile empty name validation', async ({ page }) => {
   const scenario = 'Profile – invalid inputs'
   try {
     await registerAndLogin(page)
     await page.goto('/profile')
-    const emailInput = page.locator('input[type="email"]')
-    if (await emailInput.count() === 0) {
-      record('Step 4', scenario, 'Invalid input validation', 'Email field not editable on profile', 'SKIP')
-      return
-    }
-    await emailInput.fill('not-valid-email')
-    const save = page.getByRole('button', { name: /save|update/i })
-    if (await save.count() === 0) {
-      record('Step 4', scenario, 'Invalid input validation', 'No save button on profile', 'SKIP')
-      return
-    }
-    await save.first().click()
-    const err = page.getByText(/invalid|valid email|email/i)
-    const html5 = await emailInput.evaluate((el) => !el.checkValidity())
-    if ((await err.isVisible().catch(() => false)) || html5) {
-      record('Step 4', scenario, 'Invalid email rejected', 'Validation triggered', 'PASS')
-    } else {
-      record('Step 4', scenario, 'Invalid email rejected', 'No validation feedback', 'FAIL')
-      expect(await err.isVisible().catch(() => false) || html5).toBeTruthy()
-    }
+    const nameInput = page.getByPlaceholder('John Doe')
+    await nameInput.fill('')
+    await page.getByRole('button', { name: /save changes/i }).click()
+    await expect(page.getByText(/full name is required|required/i).first()).toBeVisible({ timeout: 8_000 })
+    record('Step 4', scenario, 'Empty name rejected', 'Error shown', 'PASS')
   } catch (e) {
     record('Step 4', scenario, 'Profile validation', e.message, 'FAIL')
     throw e

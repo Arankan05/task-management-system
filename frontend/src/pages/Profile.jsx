@@ -236,7 +236,6 @@ function Profile() {
                   onChange={(e) => handleChange('name', e.target.value)}
                   placeholder="John Doe"
                   className="input-field"
-                  required
                 />
               </div>
 

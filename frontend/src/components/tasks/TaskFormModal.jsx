@@ -71,12 +71,13 @@ function TaskFormModal({ isOpen, onClose, task = null, projectId, workspaceId, o
       }
 
     try {
+      const message = task ? 'Task updated successfully' : 'Task created successfully'
       if (task) {
         await dispatch(updateTask({ id: task.id, payload })).unwrap()
       } else {
         await dispatch(createTask({ workspaceId, projectId, ...payload })).unwrap()
       }
-      onSuccess?.()
+      onSuccess?.(message)
       onClose()
     } catch (err) {
       setLocalError(err)
