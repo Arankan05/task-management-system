@@ -134,7 +134,7 @@ function Workspaces() {
                 ))}
               </div>
             </div>
-            <button type="submit" disabled={creating} className="btn-primary w-full">{creating ? 'Creating...' : 'Create Workspace'}</button>
+            <button type="submit" disabled={creating} className="btn-primary w-full">{creating ? 'Saving...' : 'Save Workspace'}</button>
           </form>
         </Modal>
       </div>
