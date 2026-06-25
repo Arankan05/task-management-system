@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Calendar } from 'lucide-react'
@@ -14,14 +15,19 @@ function KanbanCard({ task, draggable = true }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.85 : 1,
+    zIndex: isDragging ? 10 : undefined,
   }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`glass-card p-3 transition-shadow ${draggable ? 'cursor-grab active:cursor-grabbing hover:shadow-elevated' : 'cursor-default'}`}
+      className={`glass-card p-3 transition-shadow duration-150 ${
+        draggable
+          ? `cursor-grab active:cursor-grabbing ${isDragging ? 'shadow-elevated ring-2 ring-primary/20' : 'hover:shadow-elevated hover:-translate-y-0.5'}`
+          : 'cursor-default'
+      }`}
       {...attributes}
       {...(draggable ? listeners : {})}
     >
@@ -48,4 +54,4 @@ function KanbanCard({ task, draggable = true }) {
   )
 }
 
-export default KanbanCard
+export default memo(KanbanCard)

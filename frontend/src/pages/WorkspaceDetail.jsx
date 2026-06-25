@@ -4,6 +4,7 @@ import { Link, useParams, useLocation } from 'react-router-dom'
 import { Plus, Search, ListTodo } from 'lucide-react'
 import Layout from '../components/Layout'
 import PageHeader from '../components/ui/PageHeader'
+import PageTransition from '../components/ui/PageTransition'
 import EmptyState from '../components/ui/EmptyState'
 import TaskCard from '../components/tasks/TaskCard'
 import TaskFormModal from '../components/tasks/TaskFormModal'
@@ -40,6 +41,7 @@ function WorkspaceDetail() {
   const [priority, setPriority] = useState('')
   const [sort, setSort] = useState('recent')
   const [localError, setLocalError] = useState('')
+  const [success, setSuccess] = useState('')
   const [stats, setStats] = useState(null)
   const [statsLoading, setStatsLoading] = useState(false)
 
@@ -91,12 +93,12 @@ function WorkspaceDetail() {
   }, [tab, workspaceId])
 
   if (loadingWs) {
-    return <Layout><div className="flex justify-center py-20"><Loader /></div></Layout>
+    return <Layout><Loader fullPage /></Layout>
   }
 
   return (
     <Layout>
-      <div className="page-container">
+      <PageTransition className="page-container">
         <PageHeader
           breadcrumb={[
             { label: 'Workspaces', to: '/workspaces' },
@@ -118,6 +120,7 @@ function WorkspaceDetail() {
         />
 
         {(localError || error) && <div className="mb-4"><Alert message={localError || error} type="error" onClose={() => setLocalError('')} /></div>}
+        {success && <div className="mb-4"><Alert message={success} type="success" onClose={() => setSuccess('')} /></div>}
 
         <WorkspaceTabs activeTab={tab} onTabChange={setTab} />
 
@@ -149,7 +152,7 @@ function WorkspaceDetail() {
             </div>
 
             {loading ? (
-              <div className="flex justify-center py-16"><Loader /></div>
+              <Loader text="Loading tasks..." />
             ) : tasks.length === 0 ? (
               <EmptyState
                 icon={ListTodo}
@@ -181,8 +184,16 @@ function WorkspaceDetail() {
           />
         )}
 
-        <TaskFormModal isOpen={taskModal} onClose={() => setTaskModal(false)} workspaceId={workspaceId} onSuccess={() => dispatch(fetchTasks({ workspaceId }))} />
-      </div>
+        <TaskFormModal
+          isOpen={taskModal}
+          onClose={() => setTaskModal(false)}
+          workspaceId={workspaceId}
+          onSuccess={(message) => {
+            if (message) setSuccess(message)
+            dispatch(fetchTasks({ workspaceId, search, status, priority, sort }))
+          }}
+        />
+      </PageTransition>
     </Layout>
   )
 }
