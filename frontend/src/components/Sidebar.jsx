@@ -87,8 +87,8 @@ function Sidebar({ mobileOpen, onClose }) {
         : 'text-slate-400 hover:text-white hover:bg-white/10'
     }`
 
-  const NavContent = () => (
-    <nav className="flex flex-col gap-1 p-4 flex-1 overflow-y-auto">
+  const NavMenu = () => (
+    <nav className="flex flex-col gap-1 p-4 flex-1 min-h-0 overflow-y-auto">
       <Link
         to="/workspaces"
         onClick={onClose}
@@ -181,27 +181,30 @@ function Sidebar({ mobileOpen, onClose }) {
           </div>
         )
       })}
-
-      <div className="mt-auto pt-4 border-t border-white/10">
-        <Link
-          to="/settings"
-          onClick={onClose}
-          className={navLinkClass(isGlobalActive('/settings'))}
-        >
-          <SettingsIcon size={18} />
-          Settings
-        </Link>
-      </div>
     </nav>
+  )
+
+  const SettingsLink = () => (
+    <div className="shrink-0 p-4 border-t border-white/10">
+      <Link
+        to="/settings"
+        onClick={onClose}
+        className={navLinkClass(isGlobalActive('/settings'))}
+      >
+        <SettingsIcon size={18} />
+        Settings
+      </Link>
+    </div>
   )
 
   return (
     <>
-      <aside className="hidden lg:flex w-64 bg-brand-900 min-h-[calc(100vh-64px)] flex-col shrink-0">
-        <div className="px-6 py-5 border-b border-white/10">
+      <aside className="hidden lg:flex w-64 bg-brand-900 sticky top-16 self-start h-[calc(100vh-4rem)] flex-col shrink-0">
+        <div className="px-6 py-5 border-b border-white/10 shrink-0">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Navigation</p>
         </div>
-        <NavContent />
+        <NavMenu />
+        <SettingsLink />
       </aside>
 
       {mobileOpen && (
@@ -212,7 +215,8 @@ function Sidebar({ mobileOpen, onClose }) {
               <BrandLogo size="sm" lightText showName />
               <button type="button" onClick={onClose} className="text-slate-400 hover:text-white"><X size={20} /></button>
             </div>
-            <NavContent />
+            <NavMenu />
+            <SettingsLink />
           </aside>
         </div>
       )}
