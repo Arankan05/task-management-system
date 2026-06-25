@@ -14,8 +14,8 @@ const {
   notifyTaskComment,
 } = require("../services/notificationService");
 
-const emitProjectUsers = (io, projectId, event, payload) => {
-  io.to(`project:${projectId}`).emit(event, payload);
+const emitTaskEvent = (io, workspaceId, projectId, event, payload) => {
+  io.to(`project:${projectId}`).to(`workspace:${workspaceId}`).emit(event, payload);
 };
 
 const actorName = (req) => req.user?.name || req.user?.email || "Someone";
@@ -75,7 +75,7 @@ const createTask = async (req, res) => {
     });
 
     const io = req.app.get("io");
-    emitProjectUsers(io, projectId, "task:created", { task });
+    emitTaskEvent(io, project.workspaceId, projectId, "task:created", { task });
     await notifyTaskAssigned(io, task, req.user.id, actorName(req));
 
     return successResponse(res, "Task created", task, 201);
@@ -108,7 +108,7 @@ const updateTask = async (req, res) => {
 
     const updated = await taskService.updateTask(req.params.id, req.body);
     const io = req.app.get("io");
-    emitProjectUsers(io, access.task.projectId, "task:updated", { task: updated });
+    emitTaskEvent(io, access.task.project.workspaceId, access.task.projectId, "task:updated", { task: updated });
 
     if (req.body.assignedToId && req.body.assignedToId !== access.task.assignedToId) {
       await notifyTaskAssigned(io, updated, req.user.id, actorName(req));
@@ -148,7 +148,7 @@ const updateTaskStatus = async (req, res) => {
     const updated = await taskService.updateTask(req.params.id, { status, progress });
 
     const io = req.app.get("io");
-    emitProjectUsers(io, access.task.projectId, "task:updated", { task: updated });
+    emitTaskEvent(io, access.task.project.workspaceId, access.task.projectId, "task:updated", { task: updated });
     await notifyTaskStatusChanged(io, updated, req.user.id, actorName(req), status);
 
     return successResponse(res, "Status updated", updated);
@@ -168,7 +168,7 @@ const deleteTask = async (req, res) => {
 
     await taskService.deleteTask(req.params.id);
     const io = req.app.get("io");
-    emitProjectUsers(io, access.task.projectId, "task:deleted", { taskId: req.params.id });
+    emitTaskEvent(io, access.task.project.workspaceId, access.task.projectId, "task:deleted", { taskId: req.params.id });
 
     return successResponse(res, "Task deleted");
   } catch (error) {
