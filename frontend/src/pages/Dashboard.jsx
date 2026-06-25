@@ -92,7 +92,6 @@ function Dashboard() {
     socket.on("task:deleted", handleRealtimeDelete)
 
     socket.on("online-users", (users) => {
-      console.log("🟢 Online users:", users)
       setOnlineUsers(users)
     })
 

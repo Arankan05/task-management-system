@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useParams } from 'react-router-dom'
-import { Plus, ArrowLeft, Search, SortAsc } from 'lucide-react'
+import { Plus, ArrowLeft, Search } from 'lucide-react'
 import Layout from '../components/Layout'
 import TaskCard from '../components/tasks/TaskCard'
 import TaskFormModal from '../components/tasks/TaskFormModal'

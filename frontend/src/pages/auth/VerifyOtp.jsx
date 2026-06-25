@@ -11,7 +11,7 @@ function VerifyOtp() {
   const location = useLocation()
   const emailFromState = location.state?.email || ''
 
-  const [email, setEmail] = useState(emailFromState)
+  const email = emailFromState
   const [otp, setOtp] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
