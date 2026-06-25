@@ -28,6 +28,7 @@ function WorkspaceTaskDetail() {
   const [comment, setComment] = useState('')
   const [commentLoading, setCommentLoading] = useState(false)
   const [localError, setLocalError] = useState('')
+  const [success, setSuccess] = useState('')
   const [myRole, setMyRole] = useState(null)
 
   const base = `/workspaces/${workspaceId}`
@@ -109,6 +110,7 @@ function WorkspaceTaskDetail() {
         </Link>
 
         {localError && <div className="mb-4"><Alert message={localError} type="error" onClose={() => setLocalError('')} /></div>}
+        {success && <div className="mb-4"><Alert message={success} type="success" onClose={() => setSuccess('')} /></div>}
 
         <div className="glass-card p-6 sm:p-8 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -207,7 +209,16 @@ function WorkspaceTaskDetail() {
         </div>
 
         {canEdit && (
-          <TaskFormModal isOpen={editOpen} onClose={() => setEditOpen(false)} task={task} workspaceId={workspaceId} onSuccess={() => dispatch(fetchTaskById(taskId))} />
+          <TaskFormModal
+            isOpen={editOpen}
+            onClose={() => setEditOpen(false)}
+            task={task}
+            workspaceId={workspaceId}
+            onSuccess={(message) => {
+              if (message) setSuccess(message)
+              dispatch(fetchTaskById(taskId))
+            }}
+          />
         )}
       </div>
     </Layout>

@@ -8,16 +8,23 @@ import {
 import { fetchWorkspaces } from '../store/slices/workspacesSlice'
 import { getProjects } from '../services/projectService'
 import BrandLogo from './BrandLogo'
+import { canManageWorkspace, normalizeWorkspaceRole } from '../utils/permissions'
+import { WORKSPACE_ROLES } from '../utils/constants'
 
 const HIDDEN_PROJECT = '__workspace_default__'
 
-const workspaceLinks = (workspaceId) => [
-  { to: `/workspaces/${workspaceId}`, state: { tab: 'analyze' }, label: 'Analyze', icon: BarChart3, tab: 'analyze' },
-  { to: `/workspaces/${workspaceId}`, state: { tab: 'tasks' }, label: 'Tasks', icon: ListTodo, tab: 'tasks' },
-  { to: `/workspaces/${workspaceId}/kanban`, label: 'Kanban', icon: Columns3, tab: 'kanban' },
-  { to: `/workspaces/${workspaceId}`, state: { tab: 'team' }, label: 'Team', icon: Users, tab: 'team' },
-  { to: `/workspaces/${workspaceId}/settings`, label: 'Settings', icon: Settings2, tab: 'settings' },
-]
+const workspaceLinks = (workspaceId, memberRole) => {
+  const links = [
+    { to: `/workspaces/${workspaceId}`, state: { tab: 'analyze' }, label: 'Analyze', icon: BarChart3, tab: 'analyze' },
+    { to: `/workspaces/${workspaceId}`, state: { tab: 'tasks' }, label: 'Tasks', icon: ListTodo, tab: 'tasks' },
+    { to: `/workspaces/${workspaceId}/kanban`, label: 'Kanban', icon: Columns3, tab: 'kanban' },
+    { to: `/workspaces/${workspaceId}`, state: { tab: 'team' }, label: 'Team', icon: Users, tab: 'team' },
+  ]
+  if (canManageWorkspace(memberRole)) {
+    links.push({ to: `/workspaces/${workspaceId}/settings`, label: 'Settings', icon: Settings2, tab: 'settings' })
+  }
+  return links
+}
 
 function Sidebar({ mobileOpen, onClose }) {
   const dispatch = useDispatch()
@@ -161,7 +168,7 @@ function Sidebar({ mobileOpen, onClose }) {
                 )}
 
                 <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Workspace</p>
-                {workspaceLinks(ws.id).map(({ to, state, label, icon: Icon, tab }) => {
+                {workspaceLinks(ws.id, normalizeWorkspaceRole(ws.memberRole || WORKSPACE_ROLES.ADMINISTRATOR)).map(({ to, state, label, icon: Icon, tab }) => {
                   const active = isLinkActive(ws.id, { tab })
                   return (
                     <Link

@@ -5,9 +5,10 @@ import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useS
 import { Plus, Columns3 } from 'lucide-react'
 import Layout from '../components/Layout'
 import PageHeader from '../components/ui/PageHeader'
+import PageTransition from '../components/ui/PageTransition'
+import KanbanBoardSkeleton from '../components/ui/KanbanBoardSkeleton'
 import KanbanColumn from '../components/kanban/KanbanColumn'
 import TaskFormModal from '../components/tasks/TaskFormModal'
-import Loader from '../components/ui/Loader'
 import Alert from '../components/ui/Alert'
 import WorkspaceTabs from '../components/workspace/WorkspaceTabs'
 import { fetchTasks, updateTaskStatus } from '../store/slices/tasksSlice'
@@ -25,10 +26,17 @@ function WorkspaceKanban() {
   const dispatch = useDispatch()
   const { user } = useSelector((s) => s.auth)
   const { items: tasks, loading, error } = useSelector((s) => s.tasks)
+  const { active: activeWorkspace, items: workspaces } = useSelector((s) => s.workspaces)
   const [modalOpen, setModalOpen] = useState(false)
   const [activeTask, setActiveTask] = useState(null)
   const [statusError, setStatusError] = useState('')
+  const [success, setSuccess] = useState('')
   const [myRole, setMyRole] = useState(null)
+
+  const workspaceName =
+    (activeWorkspace?.id === workspaceId ? activeWorkspace.name : null)
+    || workspaces.find((w) => w.id === workspaceId)?.name
+    || 'Workspace'
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -72,11 +80,11 @@ function WorkspaceKanban() {
 
   return (
     <Layout>
-      <div className="page-container">
+      <PageTransition className="page-container">
         <PageHeader
           breadcrumb={[
             { label: 'Workspaces', to: '/workspaces' },
-            { label: 'Workspace', to: `/workspaces/${workspaceId}` },
+            { label: workspaceName, to: `/workspaces/${workspaceId}` },
             { label: 'Kanban' },
           ]}
           icon={<Columns3 size={24} />}
@@ -97,11 +105,12 @@ function WorkspaceKanban() {
         />
 
         {(error || statusError) && <div className="mb-4"><Alert message={error || statusError} type="error" onClose={() => setStatusError('')} /></div>}
+        {success && <div className="mb-4"><Alert message={success} type="success" onClose={() => setSuccess('')} /></div>}
 
         <WorkspaceTabs activeTab="kanban" />
 
         {loading ? (
-          <div className="flex justify-center py-20"><Loader /></div>
+          <KanbanBoardSkeleton />
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={(e) => setActiveTask(e.active.data.current?.task)} onDragEnd={handleDragEnd}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pb-8">
@@ -111,16 +120,24 @@ function WorkspaceKanban() {
             </div>
             <DragOverlay>
               {activeTask ? (
-                <div className="glass-card p-4 opacity-90 shadow-elevated">{activeTask.title}</div>
+                <div className="glass-card p-4 shadow-elevated ring-2 ring-primary/20 scale-105">{activeTask.title}</div>
               ) : null}
             </DragOverlay>
           </DndContext>
         )}
 
         {canCreateTask(myRole) && (
-          <TaskFormModal isOpen={modalOpen} onClose={() => setModalOpen(false)} workspaceId={workspaceId} onSuccess={() => dispatch(fetchTasks({ workspaceId }))} />
+          <TaskFormModal
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            workspaceId={workspaceId}
+            onSuccess={(message) => {
+              if (message) setSuccess(message)
+              dispatch(fetchTasks({ workspaceId }))
+            }}
+          />
         )}
-      </div>
+      </PageTransition>
     </Layout>
   )
 }
