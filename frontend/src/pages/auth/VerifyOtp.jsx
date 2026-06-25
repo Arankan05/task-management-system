@@ -60,7 +60,11 @@ function VerifyOtp() {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex flex-1">
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 p-12 flex-col justify-between relative overflow-hidden">
+        <div
+          className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-between relative overflow-hidden bg-cover bg-center"
+          style={{ backgroundImage: "url('/auth-hero.png')" }}
+        >
+          <div className="absolute inset-0 bg-brand-900/65" />
           <div className="relative z-10">
             <BrandLogo size="lg" lightText className="mb-8" />
             <h1 className="text-4xl font-bold text-white leading-tight mb-4">
@@ -70,7 +74,6 @@ function VerifyOtp() {
               Check your inbox for the 6-digit code we sent. It expires in 10 minutes.
             </p>
           </div>
-          <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-white/5" />
         </div>
 
         <div className="flex-1 flex items-center justify-center p-6 bg-surface-muted">
