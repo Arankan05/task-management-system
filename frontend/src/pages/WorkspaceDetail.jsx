@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useParams, useLocation } from 'react-router-dom'
 import { Plus, Search, ListTodo } from 'lucide-react'
@@ -49,7 +49,7 @@ function WorkspaceDetail() {
   const canManageTeamMembers = canManageTeam(myRole)
   const canManageTasks = canManageProjectsAndTasks(myRole)
 
-  const loadWorkspace = async () => {
+  const loadWorkspace = useCallback(async () => {
     setLoadingWs(true)
     try {
       const ws = await getWorkspace(workspaceId)
@@ -62,13 +62,13 @@ function WorkspaceDetail() {
     } finally {
       setLoadingWs(false)
     }
-  }
+  }, [workspaceId, dispatch])
 
   useEffect(() => {
     loadWorkspace()
     dispatch(setActiveProjectId(null))
     getSocket()?.emit('join:workspace', workspaceId)
-  }, [workspaceId])
+  }, [workspaceId, dispatch, loadWorkspace])
 
   useEffect(() => {
     if (location.state?.tab && TABS.includes(location.state.tab)) {

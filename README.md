@@ -1,20 +1,21 @@
 # TASKPULSE — Task Management System
 
-Full-stack MERN-style application (React + Express + MySQL/Prisma).
+Full-stack task management application (React + Express + MySQL/Prisma).
 
 ## Project Structure
 
 ```txt
 task-management-system/
-├── prisma/           # Database schema & migrations (shared)
-├── prisma.config.ts
-├── backend/          # Express API, Socket.io
+├── prisma/              # Database schema & migrations (shared)
+├── prisma.config.ts     # Prisma CLI config (DB URL, schema path)
+├── backend/             # Express API, Socket.io
 │   ├── src/
 │   ├── scripts/
 │   └── package.json
-├── frontend/         # React + Vite + Redux
+├── frontend/            # React + Vite + Redux
 │   └── src/
-└── package.json      # Root scripts (orchestration)
+├── e2e-tests/           # Playwright end-to-end tests
+└── package.json         # Root scripts (orchestration)
 ```
 
 ## Setup
@@ -25,31 +26,82 @@ npm run install:all
 
 # Configure backend environment
 cp backend/.env.example backend/.env
-# Edit backend/.env with your DATABASE_URL, JWT_SECRET, etc.
+# Edit backend/.env: DATABASE_URL, JWT_SECRET, CLIENT_URL, email, etc.
+
+# Apply database schema
+npm run prisma:push
 ```
 
-## Run
+## Development
 
-From project root:
+Run **both** servers in separate terminals:
 
 ```bash
-# Backend only (port 5000)
+# Terminal 1 — API + Socket.io (port 5000)
 npm run dev
 
-# Frontend only (port 5173)
+# Terminal 2 — Vite dev server (port 5173)
 npm run dev:frontend
 ```
 
-Run both in separate terminals for full-stack development.
+Open http://localhost:5173
 
-## Environment
+## Production Build (Frontend)
 
-- **Backend:** `backend/.env`
-- **Frontend:** `frontend/.env` (optional — Vite proxy is recommended)
+```bash
+cd frontend
+
+# Lint
+npm run lint
+
+# Build static assets → frontend/dist
+npm run build
+
+# Preview production build locally (default port 4173)
+npm run preview
+```
+
+### Frontend environment (`frontend/.env`)
+
+For **local preview** with the Vite proxy (recommended while developing):
+
+```env
+# Uses vite.config.js proxy to backend — cookies work on same origin
+# VITE_API_URL=/api
+# VITE_SOCKET_URL=
+```
+
+For **production deployment** (frontend hosted separately from API):
+
+```env
+VITE_API_URL=https://your-api.example.com/api
+VITE_SOCKET_URL=https://your-api.example.com
+```
+
+Copy from `frontend/.env.example` and adjust URLs for your host.
+
+## Testing
+
+```bash
+# E2E (requires backend + frontend running)
+cd e2e-tests
+npm install
+npx playwright test
+```
 
 ## API
 
-- Base URL: `http://localhost:5000/api`
+- Base URL (dev): `http://localhost:5000/api`
 - Swagger docs: `http://localhost:5000/api-docs`
 
-port killer - taskkill /PID 16220 /F
+## Integration Checklist
+
+With backend and frontend running, verify:
+
+- [ ] Register / login / logout
+- [ ] Create workspace, add member
+- [ ] Create / edit / delete task
+- [ ] Kanban drag-and-drop status change
+- [ ] Notifications bell + clear all
+- [ ] Profile update, app settings / theme
+- [ ] Protected routes redirect when logged out

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Plus, ArrowLeft, Search, LayoutGrid, SortAsc } from 'lucide-react'
+import { Plus, ArrowLeft, Search, SortAsc } from 'lucide-react'
 import Layout from '../components/Layout'
 import Loader from '../components/ui/Loader'
 import Alert from '../components/ui/Alert'
