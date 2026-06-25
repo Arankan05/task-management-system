@@ -8,7 +8,7 @@ function Navbar({ onMenuClick }) {
   const { user } = useSelector((state) => state.auth)
 
   return (
-    <header className="sticky top-0 z-30 bg-theme-surface/80 backdrop-blur-md border-b border-theme px-4 lg:px-6 h-16 flex items-center justify-between">
+    <header className="mt-4 md:mt-6 mx-4 md:mx-6 lg:mx-8 max-w-[1600px] w-[calc(100%-2rem)] md:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)] self-center rounded-2xl border border-white/5 bg-theme-surface/40 backdrop-blur-lg shadow-lg relative z-30 flex items-center justify-between px-6 h-16 transition-all duration-300">
       <div className="flex items-center gap-3">
         <SidebarToggle onClick={onMenuClick} />
         <BrandLogo size="nav" />

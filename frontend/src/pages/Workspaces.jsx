@@ -85,12 +85,12 @@ function Workspaces() {
               <Link
                 key={ws.id}
                 to={`/workspaces/${ws.id}`}
-                className="glass-card p-6 hover:shadow-elevated hover:border-primary/25 transition-all group"
+                className="glass-card p-6 hover:shadow-cyan-500/5 hover:border-primary/30 group"
               >
                 <div className="flex items-start gap-4">
                   <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold shrink-0 shadow-md"
-                    style={{ background: ws.color || '#7C3AED' }}
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold shrink-0 shadow-md group-hover:scale-105 transition-transform"
+                    style={{ background: ws.color || '#06b6d4' }}
                   >
                     {ws.name.charAt(0).toUpperCase()}
                   </div>
@@ -109,7 +109,7 @@ function Workspaces() {
             <button
               type="button"
               onClick={() => setModalOpen(true)}
-              className="glass-card p-6 border-2 border-dashed border-theme flex flex-col items-center justify-center gap-2 text-theme-muted hover:text-primary hover:border-primary/40 transition-colors min-h-[148px]"
+              className="glass-card p-6 border border-dashed border-white/20 flex flex-col items-center justify-center gap-2 text-theme-muted hover:text-primary hover:border-primary/40 transition-all duration-300 min-h-[148px]"
             >
               <Layers size={28} />
               <span className="text-sm font-medium">Create workspace</span>
