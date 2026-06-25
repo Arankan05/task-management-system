@@ -44,7 +44,12 @@ const workspacesSlice = createSlice({
       })
       .addCase(fetchWorkspaces.fulfilled, (state, action) => {
         state.loading = false
-        state.items = action.payload
+        const seen = new Set()
+        state.items = action.payload.filter((ws) => {
+          if (!ws?.id || seen.has(ws.id)) return false
+          seen.add(ws.id)
+          return true
+        })
       })
       .addCase(fetchWorkspaces.rejected, (state, action) => {
         state.loading = false

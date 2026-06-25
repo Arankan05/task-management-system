@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import KanbanCard from './KanbanCard'
@@ -39,4 +40,4 @@ function KanbanColumn({ column, tasks, canDragTask }) {
   )
 }
 
-export default KanbanColumn
+export default memo(KanbanColumn)

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Layers, Users, Search } from 'lucide-react'
 import Layout from '../components/Layout'
 import PageHeader from '../components/ui/PageHeader'
-import Loader from '../components/ui/Loader'
+import PageTransition from '../components/ui/PageTransition'
+import WorkspaceGridSkeleton from '../components/ui/WorkspaceGridSkeleton'
 import Alert from '../components/ui/Alert'
 import Modal from '../components/ui/Modal'
 import { fetchWorkspaces, createWorkspace } from '../store/slices/workspacesSlice'
@@ -47,7 +48,7 @@ function Workspaces() {
 
   return (
     <Layout>
-      <div className="page-container">
+      <PageTransition className="page-container">
         <PageHeader
           title="Workspaces"
           subtitle="Organize your team, tasks, and projects in dedicated workspaces"
@@ -77,7 +78,7 @@ function Workspaces() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-20"><Loader /></div>
+          <WorkspaceGridSkeleton />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtered.map((ws) => (
@@ -134,10 +135,10 @@ function Workspaces() {
                 ))}
               </div>
             </div>
-            <button type="submit" disabled={creating} className="btn-primary w-full">{creating ? 'Creating...' : 'Create Workspace'}</button>
+            <button type="submit" disabled={creating} className="btn-primary w-full">{creating ? 'Saving...' : 'Save Workspace'}</button>
           </form>
         </Modal>
-      </div>
+      </PageTransition>
     </Layout>
   )
 }

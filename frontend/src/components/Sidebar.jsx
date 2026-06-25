@@ -8,16 +8,23 @@ import {
 import { fetchWorkspaces } from '../store/slices/workspacesSlice'
 import { getProjects } from '../services/projectService'
 import BrandLogo from './BrandLogo'
+import { canManageWorkspace, normalizeWorkspaceRole } from '../utils/permissions'
+import { WORKSPACE_ROLES } from '../utils/constants'
 
 const HIDDEN_PROJECT = '__workspace_default__'
 
-const workspaceLinks = (workspaceId) => [
-  { to: `/workspaces/${workspaceId}`, state: { tab: 'analyze' }, label: 'Analyze', icon: BarChart3, tab: 'analyze' },
-  { to: `/workspaces/${workspaceId}`, state: { tab: 'tasks' }, label: 'Tasks', icon: ListTodo, tab: 'tasks' },
-  { to: `/workspaces/${workspaceId}/kanban`, label: 'Kanban', icon: Columns3, tab: 'kanban' },
-  { to: `/workspaces/${workspaceId}`, state: { tab: 'team' }, label: 'Team', icon: Users, tab: 'team' },
-  { to: `/workspaces/${workspaceId}/settings`, label: 'Settings', icon: Settings2, tab: 'settings' },
-]
+const workspaceLinks = (workspaceId, memberRole) => {
+  const links = [
+    { to: `/workspaces/${workspaceId}`, state: { tab: 'analyze' }, label: 'Analyze', icon: BarChart3, tab: 'analyze' },
+    { to: `/workspaces/${workspaceId}`, state: { tab: 'tasks' }, label: 'Tasks', icon: ListTodo, tab: 'tasks' },
+    { to: `/workspaces/${workspaceId}/kanban`, label: 'Kanban', icon: Columns3, tab: 'kanban' },
+    { to: `/workspaces/${workspaceId}`, state: { tab: 'team' }, label: 'Team', icon: Users, tab: 'team' },
+  ]
+  if (canManageWorkspace(memberRole)) {
+    links.push({ to: `/workspaces/${workspaceId}/settings`, label: 'Settings', icon: Settings2, tab: 'settings' })
+  }
+  return links
+}
 
 function Sidebar({ mobileOpen, onClose }) {
   const dispatch = useDispatch()
@@ -87,8 +94,8 @@ function Sidebar({ mobileOpen, onClose }) {
         : 'text-slate-400 hover:text-white hover:bg-white/10'
     }`
 
-  const NavContent = () => (
-    <nav className="flex flex-col gap-1 p-4 flex-1 overflow-y-auto">
+  const NavMenu = () => (
+    <nav className="flex flex-col gap-1 p-4 flex-1 min-h-0 overflow-y-auto">
       <Link
         to="/workspaces"
         onClick={onClose}
@@ -161,7 +168,7 @@ function Sidebar({ mobileOpen, onClose }) {
                 )}
 
                 <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Workspace</p>
-                {workspaceLinks(ws.id).map(({ to, state, label, icon: Icon, tab }) => {
+                {workspaceLinks(ws.id, normalizeWorkspaceRole(ws.memberRole || WORKSPACE_ROLES.ADMINISTRATOR)).map(({ to, state, label, icon: Icon, tab }) => {
                   const active = isLinkActive(ws.id, { tab })
                   return (
                     <Link
@@ -181,27 +188,30 @@ function Sidebar({ mobileOpen, onClose }) {
           </div>
         )
       })}
-
-      <div className="mt-auto pt-4 border-t border-white/10">
-        <Link
-          to="/settings"
-          onClick={onClose}
-          className={navLinkClass(isGlobalActive('/settings'))}
-        >
-          <SettingsIcon size={18} />
-          Settings
-        </Link>
-      </div>
     </nav>
+  )
+
+  const SettingsLink = () => (
+    <div className="shrink-0 p-4 border-t border-white/10">
+      <Link
+        to="/settings"
+        onClick={onClose}
+        className={navLinkClass(isGlobalActive('/settings'))}
+      >
+        <SettingsIcon size={18} />
+        Settings
+      </Link>
+    </div>
   )
 
   return (
     <>
-      <aside className="hidden lg:flex w-64 bg-brand-900 min-h-[calc(100vh-64px)] flex-col shrink-0">
-        <div className="px-6 py-5 border-b border-white/10">
+      <aside className="hidden lg:flex w-64 bg-brand-900 sticky top-16 self-start h-[calc(100vh-4rem)] flex-col shrink-0">
+        <div className="px-6 py-5 border-b border-white/10 shrink-0">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Navigation</p>
         </div>
-        <NavContent />
+        <NavMenu />
+        <SettingsLink />
       </aside>
 
       {mobileOpen && (
@@ -212,7 +222,8 @@ function Sidebar({ mobileOpen, onClose }) {
               <BrandLogo size="sm" lightText showName />
               <button type="button" onClick={onClose} className="text-slate-400 hover:text-white"><X size={20} /></button>
             </div>
-            <NavContent />
+            <NavMenu />
+            <SettingsLink />
           </aside>
         </div>
       )}
