@@ -1,15 +1,19 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchProfile } from '../store/slices/authSlice'
+import { initializeAuth } from '../store/slices/authSlice'
 import { fetchWorkspaces } from '../store/slices/workspacesSlice'
 import { connectSocket, disconnectSocket } from '../services/socket'
+import NotificationToast from './NotificationToast'
 
 function AppInitializer({ children }) {
   const dispatch = useDispatch()
   const { isAuthenticated, initialized } = useSelector((state) => state.auth)
+  const initStarted = useRef(false)
 
   useEffect(() => {
-    dispatch(fetchProfile())
+    if (initStarted.current) return
+    initStarted.current = true
+    dispatch(initializeAuth())
   }, [dispatch])
 
   useEffect(() => {
@@ -21,7 +25,12 @@ function AppInitializer({ children }) {
     }
   }, [dispatch, initialized, isAuthenticated])
 
-  return children
+  return (
+    <>
+      {children}
+      {isAuthenticated && <NotificationToast />}
+    </>
+  )
 }
 
 export default AppInitializer

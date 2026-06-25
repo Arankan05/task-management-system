@@ -129,7 +129,12 @@ const tasksSlice = createSlice({
       })
       .addCase(fetchTasks.fulfilled, (state, action) => {
         state.loading = false
-        state.items = action.payload
+        const seen = new Set()
+        state.items = action.payload.filter((task) => {
+          if (!task?.id || seen.has(task.id)) return false
+          seen.add(task.id)
+          return true
+        })
       })
       .addCase(fetchTasks.rejected, (state, action) => {
         state.loading = false
@@ -141,7 +146,9 @@ const tasksSlice = createSlice({
       })
       .addCase(createTask.fulfilled, (state, action) => {
         state.actionLoading = false
-        state.items.unshift(action.payload)
+        if (!state.items.some((t) => t.id === action.payload.id)) {
+          state.items.unshift(action.payload)
+        }
       })
       .addCase(updateTask.fulfilled, (state, action) => {
         state.actionLoading = false
