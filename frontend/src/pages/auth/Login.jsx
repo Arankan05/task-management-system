@@ -5,7 +5,9 @@ import { loginUser, clearAuthError } from '../../store/slices/authSlice'
 import Alert from '../../components/ui/Alert'
 import Footer from '../../components/Footer'
 import BrandLogo, { APP_NAME } from '../../components/BrandLogo'
-import { LogIn, Mail, Lock } from 'lucide-react'
+import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+
+const REMEMBER_EMAIL_KEY = 'taskpulse_remember_email'
 
 function Login() {
   const navigate = useNavigate()
@@ -14,12 +16,21 @@ function Login() {
   const dispatch = useDispatch()
   const { loading, error } = useSelector((state) => state.auth ?? {})
   const [email, setEmail] = useState(searchParams.get('email') || '')
+  const [rememberMe, setRememberMe] = useState(false)
 
   useEffect(() => {
     const prefill = searchParams.get('email')
-    if (prefill) setEmail(prefill)
+    if (prefill) {
+      setEmail(prefill)
+      return
+    }
+    const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY)
+    if (savedEmail) {
+      setEmail(savedEmail)
+    }
   }, [searchParams])
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [validationError, setValidationError] = useState('')
 
   const handleLogin = async (e) => {
@@ -33,6 +44,11 @@ function Login() {
 
     try {
       const result = await dispatch(loginUser({ email, password })).unwrap()
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_EMAIL_KEY, email)
+      } else {
+        localStorage.removeItem(REMEMBER_EMAIL_KEY)
+      }
       if (result.mustResetPassword) {
         navigate('/mandatory-reset')
       } else {
@@ -91,9 +107,32 @@ function Login() {
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="input-field pl-9" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="input-field pl-9 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
               </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                />
+                <span className="text-sm text-slate-600">Remember me</span>
+              </label>
               <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
                 <LogIn size={16} />
                 {loading ? 'Signing in...' : 'Sign In'}
