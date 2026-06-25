@@ -26,7 +26,8 @@ const listWorkspaceRequests = async (req, res) => {
 
 const acceptRequest = async (req, res) => {
   try {
-    const member = await joinRequestService.acceptJoinRequest(req.params.id, req.user.id);
+    const io = req.app.get("io");
+    const member = await joinRequestService.acceptJoinRequest(req.params.id, req.user.id, io);
     return successResponse(res, "Workspace invitation accepted", member);
   } catch (error) {
     return handleError(res, error);
@@ -35,7 +36,8 @@ const acceptRequest = async (req, res) => {
 
 const rejectRequest = async (req, res) => {
   try {
-    const result = await joinRequestService.rejectJoinRequest(req.params.id, req.user.id);
+    const io = req.app.get("io");
+    const result = await joinRequestService.rejectJoinRequest(req.params.id, req.user.id, io);
     return successResponse(res, "Workspace invitation rejected", result);
   } catch (error) {
     return handleError(res, error);

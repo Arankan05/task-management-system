@@ -192,6 +192,62 @@ const refreshAccessToken = async (req, res) => {
     }
 };
 
+const getSession = async (req, res) => {
+    try {
+        const accessToken = getTokenFromRequest(req);
+
+        if (accessToken) {
+            try {
+                const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
+                const user = await prisma.user.findUnique({
+                    where: { id: decoded.id },
+                    select: USER_SELECT,
+                });
+                if (user?.isActive) {
+                    return successResponse(res, "Session active", user);
+                }
+            } catch (error) {
+                if (error.name !== "TokenExpiredError") {
+                    clearAuthCookies(res);
+                    return successResponse(res, "No active session", null);
+                }
+            }
+        }
+
+        const refreshToken = getRefreshTokenFromRequest(req);
+        if (!refreshToken) {
+            clearAuthCookies(res);
+            return successResponse(res, "No active session", null);
+        }
+
+        const record = await verifyRefreshToken(refreshToken);
+        if (!record?.user) {
+            clearAuthCookies(res);
+            return successResponse(res, "No active session", null);
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: record.userId },
+            select: USER_SELECT,
+        });
+
+        if (!user?.isActive) {
+            clearAuthCookies(res);
+            return successResponse(res, "No active session", null);
+        }
+
+        const newAccessToken = signAccessToken(user);
+        const newRefreshToken = await rotateRefreshToken(refreshToken, record.userId);
+        setAuthCookies(res, newAccessToken, newRefreshToken);
+
+        return successResponse(res, "Session restored", user);
+    } catch (error) {
+        console.error(error);
+        clearAuthCookies(res);
+        return successResponse(res, "No active session", null);
+    }
+};
+
 const getProfile = async (req, res) => {
     try {
         const user = await prisma.user.findUnique({
@@ -462,6 +518,7 @@ module.exports = {
     loginUser,
     logoutUser,
     refreshAccessToken,
+    getSession,
     getProfile,
     updateProfile,
     forgotPassword,
