@@ -1,11 +1,11 @@
 const variants = {
-  TODO: 'bg-slate-100 text-slate-700 ring-slate-200',
-  IN_PROGRESS: 'bg-amber-50 text-amber-700 ring-amber-200',
-  COMPLETED: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  DONE: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  LOW: 'bg-indigo-50 text-indigo-700 ring-indigo-200',
-  MEDIUM: 'bg-violet-50 text-violet-700 ring-violet-200',
-  HIGH: 'bg-red-50 text-red-700 ring-red-200',
+  TODO: 'bg-slate-500/10 text-slate-400 ring-slate-500/20',
+  IN_PROGRESS: 'bg-amber-500/10 text-amber-400 ring-amber-500/20',
+  COMPLETED: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
+  DONE: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
+  LOW: 'bg-cyan-500/10 text-cyan-400 ring-cyan-500/20',
+  MEDIUM: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
+  HIGH: 'bg-rose-500/10 text-rose-400 ring-rose-500/20',
 }
 
 function Badge({ label, variant = 'TODO', className = '' }) {

@@ -83,15 +83,15 @@ function Sidebar({ mobileOpen, onClose }) {
   const navLinkClass = (active) =>
     `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
       active
-        ? 'bg-brand-600 text-white shadow-md shadow-brand-600/20'
-        : 'text-slate-400 hover:text-white hover:bg-white/10'
+        ? 'bg-gradient-to-r from-cyan-500/80 to-emerald-500/80 text-white shadow-md shadow-cyan-500/25 scale-[1.02]'
+        : 'text-theme-muted hover:text-theme hover:bg-white/5'
     }`
 
   const subLinkClass = (active) =>
     `flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
       active
-        ? 'bg-brand-600 text-white'
-        : 'text-slate-400 hover:text-white hover:bg-white/10'
+        ? 'bg-gradient-to-r from-cyan-500/80 to-emerald-500/80 text-white shadow-sm'
+        : 'text-theme-muted hover:text-theme hover:bg-white/5'
     }`
 
   const NavMenu = () => (
@@ -109,7 +109,7 @@ function Sidebar({ mobileOpen, onClose }) {
         <button
           type="button"
           onClick={() => setWsDropdownOpen((o) => !o)}
-          className="flex items-center justify-between w-full px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider hover:text-slate-300"
+          className="flex items-center justify-between w-full px-4 py-2 text-xs font-semibold text-theme-muted uppercase tracking-wider hover:text-theme"
         >
           <span>Your Workspaces</span>
           {wsDropdownOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -117,7 +117,7 @@ function Sidebar({ mobileOpen, onClose }) {
       </div>
 
       {wsDropdownOpen && workspaces.length === 0 && (
-        <p className="px-4 py-2 text-xs text-slate-500">No workspaces yet</p>
+        <p className="px-4 py-2 text-xs text-theme-muted">No workspaces yet</p>
       )}
 
       {wsDropdownOpen && workspaces.map((ws) => {
@@ -131,7 +131,7 @@ function Sidebar({ mobileOpen, onClose }) {
               type="button"
               onClick={() => toggleWorkspace(ws.id)}
               className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                wsActive ? 'text-white bg-white/10' : 'text-slate-400 hover:text-white hover:bg-white/5'
+                wsActive ? 'text-theme bg-white/5 shadow-sm border border-white/5' : 'text-theme-muted hover:text-theme hover:bg-white/5'
               }`}
             >
               {isOpen ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
@@ -145,10 +145,10 @@ function Sidebar({ mobileOpen, onClose }) {
             </button>
 
             {isOpen && (
-              <div className="ml-3 mt-1 pl-3 border-l border-white/10 space-y-0.5">
+              <div className="ml-3 mt-1 pl-3 border-l border-white/5 space-y-0.5">
                 {projects.length > 0 && (
                   <>
-                    <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Projects</p>
+                    <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-theme-muted uppercase tracking-wider">Projects</p>
                     {projects.map((project) => {
                       const projectPath = `/workspaces/${ws.id}/projects/${project.id}`
                       const projectActive = location.pathname === projectPath
@@ -167,7 +167,7 @@ function Sidebar({ mobileOpen, onClose }) {
                   </>
                 )}
 
-                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Workspace</p>
+                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-theme-muted uppercase tracking-wider">Workspace</p>
                 {workspaceLinks(ws.id, normalizeWorkspaceRole(ws.memberRole || WORKSPACE_ROLES.ADMINISTRATOR)).map(({ to, state, label, icon: Icon, tab }) => {
                   const active = isLinkActive(ws.id, { tab })
                   return (
@@ -192,7 +192,7 @@ function Sidebar({ mobileOpen, onClose }) {
   )
 
   const SettingsLink = () => (
-    <div className="shrink-0 p-4 border-t border-white/10">
+    <div className="shrink-0 p-4 border-t border-white/5">
       <Link
         to="/settings"
         onClick={onClose}
@@ -206,9 +206,9 @@ function Sidebar({ mobileOpen, onClose }) {
 
   return (
     <>
-      <aside className="hidden lg:flex w-64 bg-brand-900 sticky top-16 self-start h-[calc(100vh-4rem)] flex-col shrink-0">
-        <div className="px-6 py-5 border-b border-white/10 shrink-0">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Navigation</p>
+      <aside className="hidden lg:flex w-64 bg-theme-surface/20 backdrop-blur-lg border border-white/5 rounded-3xl shadow-xl sticky top-28 self-start h-[calc(100vh-9.5rem)] flex-col shrink-0 transition-all duration-300">
+        <div className="px-6 py-5 border-b border-white/5 shrink-0">
+          <p className="text-xs font-semibold text-theme-muted uppercase tracking-wider">Navigation</p>
         </div>
         <NavMenu />
         <SettingsLink />
@@ -217,10 +217,10 @@ function Sidebar({ mobileOpen, onClose }) {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-brand-900 shadow-elevated animate-slide-up flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
+          <aside className="absolute left-4 top-4 bottom-4 w-72 bg-theme-surface/90 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl animate-slide-up flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
               <BrandLogo size="sm" lightText showName />
-              <button type="button" onClick={onClose} className="text-slate-400 hover:text-white"><X size={20} /></button>
+              <button type="button" onClick={onClose} className="text-theme-muted hover:text-theme"><X size={20} /></button>
             </div>
             <NavMenu />
             <SettingsLink />

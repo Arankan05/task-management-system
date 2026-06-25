@@ -166,8 +166,8 @@ function NotificationDropdown() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-theme-surface border border-theme rounded-xl shadow-xl z-50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-theme flex items-center justify-between gap-2">
+        <div className="absolute right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] bg-theme-surface/75 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl z-50 overflow-hidden transition-all duration-300">
+          <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between gap-2">
             <h3 className="font-semibold text-theme text-sm">Notifications</h3>
             {notifications.length > 0 && (
               <button
@@ -191,7 +191,7 @@ function NotificationDropdown() {
                 const isJoinRequest = notification.type === 'WORKSPACE_JOIN_REQUEST' && payload?.requestId
 
                 return (
-                  <div key={notification.id} className="px-4 py-3 border-b border-theme last:border-0">
+                  <div key={notification.id} className="px-4 py-3 border-b border-white/5 last:border-0">
                     {NOTIFICATION_TYPE_LABELS[notification.type] && (
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-primary mb-1">
                         {NOTIFICATION_TYPE_LABELS[notification.type]}
