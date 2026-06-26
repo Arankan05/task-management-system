@@ -37,13 +37,20 @@ function MandatoryResetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-muted">
-      <div className="flex-1 flex items-center justify-center p-6">
+    <div className="min-h-screen flex flex-col justify-between bg-cover bg-center bg-no-repeat relative overflow-hidden" style={{ backgroundImage: "url('/auth-hero.png')" }}>
+      {/* Overlay for depth and contrast */}
+      <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-[2px] pointer-events-none" />
+      {/* Background ambient glows */}
+      <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-cyan-500/10 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-[10%] right-[-25%] w-[60%] h-[60%] rounded-full bg-emerald-500/5 blur-[150px] pointer-events-none" />
+
+      <div className="flex-1 flex flex-col items-center justify-center p-6 relative z-10">
         <div className="w-full max-w-md animate-slide-up">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-8">
             <BrandLogo size="lg" />
           </div>
-          <div className="glass-card p-8">
+
+          <div className="glass-card p-8 bg-theme-surface/40 backdrop-blur-xl border border-white/5 shadow-2xl hover:translate-y-0">
             <div className="flex items-center gap-2 mb-2">
               <Shield size={20} className="text-primary" />
               <h1 className="text-2xl font-bold text-theme">Set your password</h1>
@@ -82,7 +89,7 @@ function MandatoryResetPassword() {
                   />
                 </div>
               </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full">
+              <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
                 {loading ? 'Saving...' : 'Update Password & Continue'}
               </button>
             </form>

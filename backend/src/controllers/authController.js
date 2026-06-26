@@ -5,16 +5,15 @@ const validator = require("validator");
 const { successResponse, errorResponse } = require("../utils/response");
 const { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest, getTokenFromRequest } = require("../utils/authCookie");
 const {
-  signAccessToken,
-  createRefreshToken,
-  verifyRefreshToken,
-  revokeRefreshToken,
-  revokeAllUserRefreshTokens,
-  rotateRefreshToken,
+    signAccessToken,
+    createRefreshToken,
+    verifyRefreshToken,
+    revokeRefreshToken,
+    revokeAllUserRefreshTokens,
+    rotateRefreshToken,
 } = require("../services/authTokenService");
-// [FORGOT PASSWORD] Email OTP + JWT reset token flow (see forgotPassword, verifyResetOtp, resetPassword below)
-const { sendPasswordResetOtp, OTP_EXPIRY_MINUTES } = require("../services/emailService");
-const { validatePassword } = require("../utils/passwordPolicy");
+const { sendPasswordResetOtp, OTP_EXPIRY_MINUTES, sendWelcomeUserEmail } = require("../services/emailService");
+const { validatePassword, generateTempPassword } = require("../utils/passwordPolicy");
 
 const OTP_MAX_REQUESTS = 3; // max OTP emails per user per hour
 const OTP_WINDOW_MS = 60 * 60 * 1000;
@@ -52,6 +51,12 @@ const registerUser = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
+        const sanitizedName = name ? name.replace(/<[^>]*>/g, "").trim() : "";
+
+        if (!sanitizedName) {
+        return errorResponse(res, "Name is required", 400);
+        }
+
         const existingUser = await prisma.user.findUnique({
             where: { email },
         });
@@ -64,7 +69,7 @@ const registerUser = async (req, res) => {
 
         const user = await prisma.user.create({
             data: {
-                name,
+                name: sanitizedName,
                 email,
                 password: hashedPassword,
             },
@@ -78,8 +83,12 @@ const registerUser = async (req, res) => {
             201
         );
     } catch (error) {
-        console.error(error);
-        return errorResponse(res, "Server Error", 500);
+        console.error("REGISTER ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: error.stack
+        });
     }
 };
 
@@ -511,6 +520,91 @@ const forceResetPassword = async (req, res) => {
     }
 };
 
+const bootstrapAdmin = async (req, res) => {
+    try {
+        // 1. Check if any Administrator exists in the database
+        const existingAdmin = await prisma.user.findFirst({
+            where: { role: "ADMINISTRATOR" },
+        });
+
+        if (existingAdmin) {
+            return errorResponse(
+                res,
+                "Bootstrap process is disabled. An Administrator already exists.",
+                403
+            );
+        }
+
+        // 2. Validate request body
+        const { name, email } = req.body;
+        if (!name || !name.trim()) {
+            return errorResponse(res, "Name is required", 400);
+        }
+
+        const normalizedEmail = (email || "").trim().toLowerCase();
+        if (!normalizedEmail || !validator.isEmail(normalizedEmail)) {
+            return errorResponse(res, "Please enter a valid email address", 400);
+        }
+
+        // 3. Check if user with this email already exists
+        const existingUser = await prisma.user.findUnique({
+            where: { email: normalizedEmail },
+        });
+        if (existingUser) {
+            return errorResponse(res, "A user with this email already exists", 400);
+        }
+
+        // 4. Generate temporary password and hash it
+        const tempPassword = generateTempPassword();
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        // 5. Create Administrator in the database
+        const user = await prisma.user.create({
+            data: {
+                name: name.trim(),
+                email: normalizedEmail,
+                role: "ADMINISTRATOR",
+                password: hashedPassword,
+                mustResetPassword: true,
+                isActive: true,
+                tempPasswordExpiresAt: expiresAt,
+            },
+            select: USER_SELECT,
+        });
+
+        // 6. Send welcome email (reuse existing service)
+        let emailSent = false;
+        try {
+            await sendWelcomeUserEmail({
+                to: normalizedEmail,
+                name: user.name,
+                emailAddress: normalizedEmail,
+                tempPassword,
+                expiresInHours: 24,
+            });
+            emailSent = true;
+        } catch (emailErr) {
+            console.warn("Could not send bootstrap email:", emailErr.message);
+        }
+
+        // 7. Return success response
+        return successResponse(
+            res,
+            "Administrator bootstrapped successfully.",
+            {
+                user,
+                tempPassword: emailSent ? undefined : tempPassword,
+                emailSent,
+            },
+            201
+        );
+    } catch (error) {
+        console.error("BOOTSTRAP ADMIN ERROR:", error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
@@ -523,4 +617,5 @@ module.exports = {
     verifyResetOtp,
     resetPassword,
     forceResetPassword,
+    bootstrapAdmin,
 };

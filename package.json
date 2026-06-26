@@ -13,5 +13,15 @@
     "prisma:generate": "cd backend && npx prisma generate --config ../prisma.config.ts",
     "prisma:push": "cd backend && npx prisma db push --config ../prisma.config.ts",
     "prisma:migrate": "cd backend && npx prisma migrate dev --config ../prisma.config.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.8.0",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "prisma": "^7.8.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
   }
 }

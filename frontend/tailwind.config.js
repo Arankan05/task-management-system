@@ -6,14 +6,14 @@ export default {
     extend: {
       colors: {
         brand: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          500: '#8B5CF6',
-          600: '#7C3AED',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
+          50: '#ecfeff',
+          100: '#cffafe',
+          200: '#a5f3fc',
+          500: '#06b6d4',
+          600: '#0891b2',
+          700: '#0e7490',
+          800: '#155e75',
+          900: '#0a0f1d',
         },
         primary: {
           DEFAULT: 'var(--color-primary)',

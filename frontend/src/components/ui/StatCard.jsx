@@ -1,9 +1,9 @@
 function StatCard({ title, value, icon: Icon, color = 'brand', sub }) {
   const colors = {
-    brand: 'from-brand-500 to-brand-700',
-    amber: 'from-amber-400 to-orange-500',
-    emerald: 'from-emerald-400 to-green-600',
-    red: 'from-red-400 to-rose-600',
+    brand: 'from-cyan-400 to-cyan-600 shadow-cyan-500/10',
+    amber: 'from-amber-400 to-orange-500 shadow-amber-500/10',
+    emerald: 'from-emerald-400 to-teal-500 shadow-emerald-500/10',
+    red: 'from-rose-400 to-red-600 shadow-red-500/10',
   }
 
   return (

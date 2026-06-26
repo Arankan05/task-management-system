@@ -62,54 +62,42 @@ function Login() {
   const displayError = validationError || error
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="flex flex-1">
-      <div
-        className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-between relative overflow-hidden bg-cover bg-center"
-        style={{ backgroundImage: "url('/auth-hero.png')" }}
-      >
-        <div className="absolute inset-0 bg-brand-900/65" />
-        <div className="relative z-10">
-          <BrandLogo size="lg" lightText className="mb-8" />
-          <h1 className="text-4xl font-bold text-white leading-tight mb-4">
-            Manage tasks<br />with clarity.
-          </h1>
-          <p className="text-brand-100 text-lg max-w-md">
-            Sign in to {APP_NAME} and take control of your team&apos;s work.
-          </p>
-        </div>
-      </div>
+    <div className="min-h-screen flex flex-col justify-between bg-cover bg-center bg-no-repeat relative overflow-hidden" style={{ backgroundImage: "url('/auth-hero.png')" }}>
+      {/* Overlay for depth and contrast */}
+      <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-[2px] pointer-events-none" />
+      {/* Background ambient glows */}
+      <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-cyan-500/10 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-[10%] right-[-25%] w-[60%] h-[60%] rounded-full bg-emerald-500/5 blur-[150px] pointer-events-none" />
 
-      <div className="flex-1 flex items-center justify-center p-6 bg-surface-muted">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 relative z-10">
         <div className="w-full max-w-md animate-slide-up">
-          <div className="lg:hidden flex justify-center mb-8">
-            <BrandLogo size="md" />
+          <div className="flex justify-center mb-8">
+            <BrandLogo size="lg" />
           </div>
 
-          <div className="glass-card p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-1">Welcome back</h2>
-            <p className="text-slate-500 text-sm mb-6">Sign in to your account</p>
+          <div className="glass-card p-8 bg-theme-surface/40 backdrop-blur-xl border border-white/5 shadow-2xl hover:translate-y-0">
+            <h2 className="text-2xl font-bold text-theme mb-1">Welcome back</h2>
+            <p className="text-theme-muted text-sm mb-6">Sign in to your account</p>
 
             {displayError && <div className="mb-4"><Alert message={displayError} type="error" onClose={() => { setValidationError(''); dispatch(clearAuthError()) }} /></div>}
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                <label className="block text-sm font-medium text-theme-muted mb-1.5">Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted" size={16} />
                   <input type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className="input-field pl-9" />
                 </div>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-sm font-medium text-slate-700">Password</label>
-                  {/* [FORGOT PASSWORD] entry point from login page */}
-                  <Link to="/forgot-password" className="text-xs text-brand-600 font-semibold hover:text-brand-700">
+                  <label className="block text-sm font-medium text-theme-muted">Password</label>
+                  <Link to="/forgot-password" className="text-xs text-primary font-semibold hover:opacity-85">
                     Forgot password?
                   </Link>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted" size={16} />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
@@ -120,7 +108,7 @@ function Login() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-theme"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -132,9 +120,9 @@ function Login() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                  className="h-4 w-4 rounded border-theme text-primary focus:ring-primary/30 bg-theme-surface/50"
                 />
-                <span className="text-sm text-slate-600">Remember me</span>
+                <span className="text-sm text-theme-muted">Remember me</span>
               </label>
               <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
                 <LogIn size={16} />
@@ -142,20 +130,19 @@ function Login() {
               </button>
             </form>
 
-            <p className="text-center text-slate-500 text-sm mt-6">
+            <p className="text-center text-theme-muted text-sm mt-6">
               Don't have an account?{' '}
               <Link
                 to={redirectTo !== '/workspaces'
                   ? `/register?email=${encodeURIComponent(email)}&redirect=${encodeURIComponent(redirectTo)}`
                   : '/register'}
-                className="text-brand-600 font-semibold hover:text-brand-700"
+                className="text-primary font-semibold hover:opacity-85"
               >
                 Create one
               </Link>
             </p>
           </div>
         </div>
-      </div>
       </div>
       <Footer />
     </div>

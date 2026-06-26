@@ -8,7 +8,7 @@ url.searchParams.set('allowPublicKeyRetrieval', 'true');
 const adapter = new PrismaMariaDb(url.toString());
 const prisma = new PrismaClient({
   adapter,
-  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+  log: ['error'],
 });
 
 module.exports = prisma;

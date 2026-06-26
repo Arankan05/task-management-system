@@ -8,9 +8,9 @@ config({ path: resolve(root, '.env') })
 config({ path: resolve(root, 'backend', '.env') })
 
 export default defineConfig({
-  schema: 'prisma/schema.prisma',
+  schema: resolve(root, 'prisma/schema.prisma'),
   migrations: {
-    path: 'prisma/migrations',
+    path: resolve(root, 'prisma/migrations'),
   },
   datasource: {
     url: env('DATABASE_URL'),
