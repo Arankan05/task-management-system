@@ -14,12 +14,39 @@ const memberUserSelect = {
   isActive: true,
 };
 
-const getProjectMembers = async (projectId) =>
-  prisma.projectMember.findMany({
-    where: { projectId },
+const getProjectMembers = async (projectId) => {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { workspaceId: true },
+  });
+  if (!project) return [];
+
+  const wsMembers = await prisma.workspaceMember.findMany({
+    where: { workspaceId: project.workspaceId },
     include: { user: { select: memberUserSelect } },
     orderBy: { joinedAt: "asc" },
   });
+
+  const pmMembers = await prisma.projectMember.findMany({
+    where: { projectId },
+  });
+
+  return wsMembers.map((wm) => {
+    const explicit = pmMembers.find((pm) => pm.userId === wm.userId);
+    const role = explicit
+      ? explicit.role
+      : mapWorkspaceRoleToProjectRole(wm.role);
+
+    return {
+      id: explicit ? explicit.id : wm.id,
+      projectId,
+      userId: wm.userId,
+      role,
+      joinedAt: explicit ? explicit.joinedAt : wm.joinedAt,
+      user: wm.user,
+    };
+  });
+};
 
 const getProjectMembership = async (userId, projectId) =>
   prisma.projectMember.findUnique({
