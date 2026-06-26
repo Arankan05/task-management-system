@@ -373,10 +373,27 @@ const deleteGlobalUser = async (userId, actorId) => {
       where: { userId },
     });
 
+    // 9.1. Delete project memberships for this user
+    await tx.projectMember.deleteMany({
+      where: { userId },
+    });
+
+    // 9.2. Delete notifications for this user
+    await tx.notification.deleteMany({
+      where: { userId },
+    });
+
+    // 9.3. Delete refresh tokens for this user
+    await tx.refreshToken.deleteMany({
+      where: { userId },
+    });
+
     // 10. Delete the user record itself
     await tx.user.delete({
       where: { id: userId },
     });
+  }, {
+    timeout: 30000
   });
 
   await revokeAllUserRefreshTokens(userId);
