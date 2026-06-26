@@ -10,6 +10,8 @@ import TaskFormModal from '../components/tasks/TaskFormModal'
 import { fetchTaskById, deleteTask, clearSelectedTask, addComment, updateTask } from '../store/slices/tasksSlice'
 import { addAttachment } from '../services/taskService'
 import { formatStatus, formatPriority, formatDate } from '../utils/taskHelpers'
+import { getMyProjectRole } from '../services/projectService'
+import { canEditTaskDetails, canDeleteTask } from '../utils/permissions'
 
 function ProjectTaskDetail() {
   const { workspaceId, projectId, taskId } = useParams()
@@ -20,6 +22,7 @@ function ProjectTaskDetail() {
   const [comment, setComment] = useState('')
   const [commentLoading, setCommentLoading] = useState(false)
   const [localError, setLocalError] = useState('')
+  const [myRole, setMyRole] = useState(null)
 
   useEffect(() => {
     dispatch(fetchTaskById(taskId))
@@ -34,6 +37,17 @@ function ProjectTaskDetail() {
 
   const resolvedProjectId = projectId || task?.projectId
   const base = `/workspaces/${workspaceId}/projects/${resolvedProjectId}`
+
+  useEffect(() => {
+    if (resolvedProjectId) {
+      getMyProjectRole(resolvedProjectId)
+        .then((data) => setMyRole(data.role))
+        .catch(() => setMyRole(null))
+    }
+  }, [resolvedProjectId])
+
+  const canEdit = canEditTaskDetails(myRole)
+  const canDelete = canDeleteTask(myRole)
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this task?')) return
@@ -109,10 +123,16 @@ function ProjectTaskDetail() {
                 <Badge label={formatPriority(task.priority)} variant={task.priority} />
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => setEditOpen(true)} className="btn-secondary"><Edit size={16} /> Edit</button>
-              <button onClick={handleDelete} className="btn-danger"><Trash2 size={16} /> Delete</button>
-            </div>
+            {(canEdit || canDelete) && (
+              <div className="flex gap-2">
+                {canEdit && (
+                  <button onClick={() => setEditOpen(true)} className="btn-secondary"><Edit size={16} /> Edit</button>
+                )}
+                {canDelete && (
+                  <button onClick={handleDelete} className="btn-danger"><Trash2 size={16} /> Delete</button>
+                )}
+              </div>
+            )}
           </div>
 
           {task.description && (

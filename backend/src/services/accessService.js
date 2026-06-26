@@ -52,6 +52,9 @@ const getProjectRole = async (userId, projectId, workspaceId) => {
     if (workspaceRole === WORKSPACE_ROLES.PROJECT_MANAGER) {
       return PROJECT_ROLES.PROJECT_MANAGER;
     }
+    if (workspaceRole === WORKSPACE_ROLES.COLLABORATOR) {
+      return PROJECT_ROLES.COLLABORATOR;
+    }
     return null;
   }
 
@@ -169,7 +172,11 @@ const getAccessibleProjectIds = async (userId, workspaceId) => {
   const workspaceRole = await getWorkspaceRole(userId, workspaceId);
   if (!workspaceRole) return [];
 
-  if (canManageWorkspace(workspaceRole) || workspaceRole === WORKSPACE_ROLES.PROJECT_MANAGER) {
+  if (
+    canManageWorkspace(workspaceRole) ||
+    workspaceRole === WORKSPACE_ROLES.PROJECT_MANAGER ||
+    workspaceRole === WORKSPACE_ROLES.COLLABORATOR
+  ) {
     const projects = await prisma.project.findMany({
       where: { workspaceId },
       select: { id: true },
