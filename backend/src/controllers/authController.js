@@ -1,0 +1,584 @@
+const prisma = require("../config/db");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const validator = require("validator");
+const { successResponse, errorResponse } = require("../utils/response");
+const { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest, getTokenFromRequest } = require("../utils/authCookie");
+const {
+    signAccessToken,
+    createRefreshToken,
+    verifyRefreshToken,
+    revokeRefreshToken,
+    revokeAllUserRefreshTokens,
+    rotateRefreshToken,
+} = require("../services/authTokenService");
+const { sendPasswordResetOtp, OTP_EXPIRY_MINUTES, sendWelcomeUserEmail } = require("../services/emailService");
+const { validatePassword, generateTempPassword } = require("../utils/passwordPolicy");
+
+const OTP_MAX_REQUESTS = 3; // max OTP emails per user per hour
+const OTP_WINDOW_MS = 60 * 60 * 1000;
+const RESET_TOKEN_EXPIRY = "15m"; // short-lived JWT after OTP is verified
+
+const GENERIC_FORGOT_MSG =
+    "If that email is registered, we sent a verification code.";
+
+const generateOtp = () =>
+    String(Math.floor(100000 + Math.random() * 900000));
+
+const clearResetOtp = {
+    resetOtp: null,
+    resetOtpExpires: null,
+    resetOtpSendCount: 0,
+    resetOtpWindowStart: null,
+};
+
+const USER_SELECT = {
+    id: true,
+    name: true,
+    email: true,
+    role: true,
+    isActive: true,
+    mustResetPassword: true,
+    profilePhoto: true,
+    contactNumber: true,
+    address: true,
+    dateOfBirth: true,
+    gender: true,
+    createdAt: true,
+};
+
+const registerUser = async (req, res) => {
+    return errorResponse(
+        res,
+        "Registration is disabled. Accounts can only be created by an Administrator.",
+        403
+    );
+};
+
+const loginUser = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        const user = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (!user) {
+            return errorResponse(res, "Invalid credentials", 400);
+        }
+
+        if (!user.isActive) {
+            return errorResponse(res, "Account deactivated", 403, "Your account has been deactivated. Contact an administrator.");
+        }
+
+        if (
+            user.mustResetPassword
+            && user.tempPasswordExpiresAt
+            && new Date() > user.tempPasswordExpiresAt
+        ) {
+            return errorResponse(
+                res,
+                "Temporary password expired",
+                403,
+                "Your temporary password has expired. Contact your administrator to recreate your account."
+            );
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return errorResponse(res, "Invalid credentials", 400);
+        }
+
+        const accessToken = signAccessToken(user);
+        const refreshToken = await createRefreshToken(user.id);
+
+        const { password: _, ...safeUser } = user;
+
+        setAuthCookies(res, accessToken, refreshToken);
+
+        return successResponse(res, "Login successful", {
+            user: safeUser,
+            mustResetPassword: user.mustResetPassword,
+        });
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+const logoutUser = async (req, res) => {
+    const refreshToken = getRefreshTokenFromRequest(req);
+
+    if (refreshToken) {
+        await revokeRefreshToken(refreshToken);
+    } else {
+        const accessToken = getTokenFromRequest(req);
+        if (accessToken) {
+            try {
+                const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
+                if (decoded?.id) {
+                    await revokeAllUserRefreshTokens(decoded.id);
+                }
+            } catch {
+                // access token may be expired; cookies will still be cleared
+            }
+        }
+    }
+
+    clearAuthCookies(res);
+    return successResponse(res, "Logged out successfully");
+};
+
+const refreshAccessToken = async (req, res) => {
+    try {
+        const refreshToken = getRefreshTokenFromRequest(req);
+
+        if (!refreshToken) {
+            clearAuthCookies(res);
+            return errorResponse(res, "Refresh token required", 401);
+        }
+
+        const record = await verifyRefreshToken(refreshToken);
+
+        if (!record?.user) {
+            clearAuthCookies(res);
+            return errorResponse(res, "Invalid or expired refresh token", 401);
+        }
+
+        const accessToken = signAccessToken(record.user);
+        const newRefreshToken = await rotateRefreshToken(refreshToken, record.userId);
+
+        setAuthCookies(res, accessToken, newRefreshToken);
+
+        return successResponse(res, "Token refreshed successfully");
+    } catch (error) {
+        console.error(error);
+        clearAuthCookies(res);
+        return errorResponse(res, "Failed to refresh token", 500);
+    }
+};
+
+const getSession = async (req, res) => {
+    try {
+        const accessToken = getTokenFromRequest(req);
+
+        if (accessToken) {
+            try {
+                const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
+                const user = await prisma.user.findUnique({
+                    where: { id: decoded.id },
+                    select: USER_SELECT,
+                });
+                if (user?.isActive) {
+                    return successResponse(res, "Session active", user);
+                }
+            } catch (error) {
+                if (error.name !== "TokenExpiredError") {
+                    clearAuthCookies(res);
+                    return successResponse(res, "No active session", null);
+                }
+            }
+        }
+
+        const refreshToken = getRefreshTokenFromRequest(req);
+        if (!refreshToken) {
+            clearAuthCookies(res);
+            return successResponse(res, "No active session", null);
+        }
+
+        const record = await verifyRefreshToken(refreshToken);
+        if (!record?.user) {
+            clearAuthCookies(res);
+            return successResponse(res, "No active session", null);
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: record.userId },
+            select: USER_SELECT,
+        });
+
+        if (!user?.isActive) {
+            clearAuthCookies(res);
+            return successResponse(res, "No active session", null);
+        }
+
+        const newAccessToken = signAccessToken(user);
+        const newRefreshToken = await rotateRefreshToken(refreshToken, record.userId);
+        setAuthCookies(res, newAccessToken, newRefreshToken);
+
+        return successResponse(res, "Session restored", user);
+    } catch (error) {
+        console.error(error);
+        clearAuthCookies(res);
+        return successResponse(res, "No active session", null);
+    }
+};
+
+const getProfile = async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: USER_SELECT,
+        });
+
+        if (!user) {
+            return errorResponse(res, "User not found", 404);
+        }
+
+        return successResponse(res, "Profile fetched", user);
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+const updateProfile = async (req, res) => {
+    try {
+        const { name, profilePhoto, contactNumber, address, dateOfBirth, gender } = req.body;
+
+        if (!name || !name.trim()) {
+            return errorResponse(res, "Full name is required", 400);
+        }
+
+        if (profilePhoto && typeof profilePhoto === "string" && profilePhoto.length > 2_000_000) {
+            return errorResponse(res, "Profile photo is too large", 400);
+        }
+
+        const user = await prisma.user.update({
+            where: { id: req.user.id },
+            data: {
+                name: name.trim(),
+                profilePhoto: profilePhoto ?? null,
+                contactNumber: contactNumber?.trim() || null,
+                address: address?.trim() || null,
+                dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+                gender: gender?.trim() || null,
+            },
+            select: USER_SELECT,
+        });
+
+        return successResponse(res, "Profile updated successfully", user);
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+/** [FORGOT PASSWORD] Step 1 — POST /api/auth/forgot-password: generate OTP, email it, store hash in DB. */
+const forgotPassword = async (req, res) => {
+    try {
+        const email = (req.body.email || "").trim().toLowerCase();
+
+        if (!email || !validator.isEmail(email)) {
+            return errorResponse(res, "Please enter a valid email address", 400);
+        }
+
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (user) {
+            const now = new Date();
+            let sendCount = user.resetOtpSendCount || 0;
+            let windowStart = user.resetOtpWindowStart;
+
+            if (
+                !windowStart ||
+                now.getTime() - new Date(windowStart).getTime() > OTP_WINDOW_MS
+            ) {
+                sendCount = 0;
+                windowStart = now;
+            }
+
+            if (sendCount >= OTP_MAX_REQUESTS) {
+                return errorResponse(
+                    res,
+                    "Too many OTP requests. Please try again in an hour.",
+                    429
+                );
+            }
+
+            const otp = generateOtp();
+            const hashedOtp = await bcrypt.hash(otp, 10);
+            const expiresAt = new Date(
+                now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000
+            );
+
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    resetOtp: hashedOtp,
+                    resetOtpExpires: expiresAt,
+                    resetOtpSendCount: sendCount + 1,
+                    resetOtpWindowStart: windowStart,
+                },
+            });
+
+            try {
+                await sendPasswordResetOtp(user.email, user.name, otp);
+            } catch (mailErr) {
+                console.error("Failed to send OTP email:", mailErr);
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: clearResetOtp,
+                });
+                return errorResponse(
+                    res,
+                    "Could not send verification email. Please try again later.",
+                    500
+                );
+            }
+        }
+
+        return successResponse(res, GENERIC_FORGOT_MSG, { email });
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+/** [FORGOT PASSWORD] Step 2 — POST /api/auth/verify-reset-otp: validate OTP, return JWT resetToken. */
+const verifyResetOtp = async (req, res) => {
+    try {
+        const email = (req.body.email || "").trim().toLowerCase();
+        const otp = (req.body.otp || "").trim();
+
+        if (!email || !validator.isEmail(email)) {
+            return errorResponse(res, "Please enter a valid email address", 400);
+        }
+
+        if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+            return errorResponse(res, "Please enter a valid 6-digit code", 400);
+        }
+
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (
+            !user ||
+            !user.resetOtp ||
+            !user.resetOtpExpires ||
+            new Date() > user.resetOtpExpires
+        ) {
+            return errorResponse(res, "Invalid or expired verification code", 400);
+        }
+
+        const isValid = await bcrypt.compare(otp, user.resetOtp);
+
+        if (!isValid) {
+            return errorResponse(res, "Invalid or expired verification code", 400);
+        }
+
+        const resetToken = jwt.sign(
+            { id: user.id, email: user.email, purpose: "password-reset" },
+            process.env.JWT_SECRET,
+            { expiresIn: RESET_TOKEN_EXPIRY }
+        );
+
+        return successResponse(res, "Verification successful", { resetToken });
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+/** [FORGOT PASSWORD] Step 3 — POST /api/auth/reset-password: verify JWT, save new password, clear OTP fields. */
+const resetPassword = async (req, res) => {
+    try {
+        const { resetToken, newPassword } = req.body;
+
+        if (!resetToken) {
+            return errorResponse(res, "Reset token is required", 400);
+        }
+
+        if (!newPassword) {
+            return errorResponse(res, "New password is required", 400);
+        }
+
+        const passwordCheck = validatePassword(newPassword);
+        if (!passwordCheck.valid) {
+            return errorResponse(res, passwordCheck.message, 400);
+        }
+
+        let decoded;
+        try {
+            decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+        } catch {
+            return errorResponse(res, "Invalid or expired reset session", 400);
+        }
+
+        if (decoded.purpose !== "password-reset") {
+            return errorResponse(res, "Invalid reset token", 400);
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: decoded.id },
+        });
+
+        if (!user) {
+            return errorResponse(res, "User not found", 404);
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                mustResetPassword: false,
+                ...clearResetOtp,
+            },
+        });
+
+        return successResponse(
+            res,
+            "Password reset successfully. You can now sign in."
+        );
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+const forceResetPassword = async (req, res) => {
+    try {
+        const { newPassword, confirmPassword } = req.body;
+
+        if (!newPassword || !confirmPassword) {
+            return errorResponse(res, "New password and confirmation are required", 400);
+        }
+
+        if (newPassword !== confirmPassword) {
+            return errorResponse(res, "Passwords do not match", 400);
+        }
+
+        const passwordCheck = validatePassword(newPassword);
+        if (!passwordCheck.valid) {
+            return errorResponse(res, passwordCheck.message, 400);
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        if (!user) {
+            return errorResponse(res, "User not found", 404);
+        }
+
+        if (!user.mustResetPassword) {
+            return errorResponse(res, "Password reset is not required for this account", 400);
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        const updated = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                mustResetPassword: false,
+                tempPasswordExpiresAt: null,
+            },
+            select: USER_SELECT,
+        });
+
+        return successResponse(res, "Password updated successfully", updated);
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+const bootstrapAdmin = async (req, res) => {
+    try {
+        // 1. Check if any Administrator exists in the database
+        const existingAdmin = await prisma.user.findFirst({
+            where: { role: "ADMINISTRATOR" },
+        });
+
+        if (existingAdmin) {
+            return errorResponse(
+                res,
+                "Bootstrap process is disabled. An Administrator already exists.",
+                403
+            );
+        }
+
+        // 2. Validate request body
+        const { name, email } = req.body;
+        if (!name || !name.trim()) {
+            return errorResponse(res, "Name is required", 400);
+        }
+
+        const normalizedEmail = (email || "").trim().toLowerCase();
+        if (!normalizedEmail || !validator.isEmail(normalizedEmail)) {
+            return errorResponse(res, "Please enter a valid email address", 400);
+        }
+
+        // 3. Check if user with this email already exists
+        const existingUser = await prisma.user.findUnique({
+            where: { email: normalizedEmail },
+        });
+        if (existingUser) {
+            return errorResponse(res, "A user with this email already exists", 400);
+        }
+
+        // 4. Generate temporary password and hash it
+        const tempPassword = generateTempPassword();
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        // 5. Create Administrator in the database
+        const user = await prisma.user.create({
+            data: {
+                name: name.trim(),
+                email: normalizedEmail,
+                role: "ADMINISTRATOR",
+                password: hashedPassword,
+                mustResetPassword: true,
+                isActive: true,
+                tempPasswordExpiresAt: expiresAt,
+            },
+            select: USER_SELECT,
+        });
+
+        // 6. Send welcome email (reuse existing service)
+        let emailSent = false;
+        try {
+            await sendWelcomeUserEmail({
+                to: normalizedEmail,
+                name: user.name,
+                emailAddress: normalizedEmail,
+                tempPassword,
+                expiresInHours: 24,
+            });
+            emailSent = true;
+        } catch (emailErr) {
+            console.warn("Could not send bootstrap email:", emailErr.message);
+        }
+
+        // 7. Return success response
+        return successResponse(
+            res,
+            "Administrator bootstrapped successfully.",
+            {
+                user,
+                tempPassword: emailSent ? undefined : tempPassword,
+                emailSent,
+            },
+            201
+        );
+    } catch (error) {
+        console.error("BOOTSTRAP ADMIN ERROR:", error);
+        return errorResponse(res, "Server Error", 500);
+    }
+};
+
+module.exports = {
+    registerUser,
+    loginUser,
+    logoutUser,
+    refreshAccessToken,
+    getSession,
+    getProfile,
+    updateProfile,
+    forgotPassword,
+    verifyResetOtp,
+    resetPassword,
+    forceResetPassword,
+    bootstrapAdmin,
+};

@@ -1,95 +1,140 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
-import api from '../../services/api'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import { loginUser, clearAuthError } from '../../store/slices/authSlice'
+import Alert from '../../components/ui/Alert'
+import Footer from '../../components/Footer'
+import BrandLogo, { APP_NAME } from '../../components/BrandLogo'
+import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+
+const REMEMBER_EMAIL_KEY = 'taskpulse_remember_email'
 
 function Login() {
   const navigate = useNavigate()
-  const { login } = useAuth()
-  const [email, setEmail] = useState('')
+  const [searchParams] = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || '/workspaces'
+  const dispatch = useDispatch()
+  const { loading, error } = useSelector((state) => state.auth ?? {})
+  const [email, setEmail] = useState(searchParams.get('email') || '')
+  const [rememberMe, setRememberMe] = useState(false)
+
+  useEffect(() => {
+    const prefill = searchParams.get('email')
+    if (prefill) {
+      setEmail(prefill)
+      return
+    }
+    const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY)
+    if (savedEmail) {
+      setEmail(savedEmail)
+    }
+  }, [searchParams])
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [validationError, setValidationError] = useState('')
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    setError('')
+    dispatch(clearAuthError())
+    setValidationError('')
 
-    if (!email) {
-      setError('Email is required')
-      return
-    }
-    if (!password) {
-      setError('Password is required')
-      return
-    }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
-    }
-    console.log('Login submitted', { email, password })
-    setLoading(true)
+    if (!email) return setValidationError('Email is required')
+    if (!password) return setValidationError('Password is required')
+    if (password.length < 6) return setValidationError('Password must be at least 6 characters')
+
     try {
-      const { data } = await api.post('/auth/login', { email, password })
-      if (data.success) {
-        const { token, user } = data.data
-        login(user, token)
-        navigate('/dashboard')
+      const result = await dispatch(loginUser({ email, password })).unwrap()
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_EMAIL_KEY, email)
+      } else {
+        localStorage.removeItem(REMEMBER_EMAIL_KEY)
       }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed')
-    } finally {
-      setLoading(false)
+      if (result.mustResetPassword) {
+        navigate('/mandatory-reset')
+      } else {
+        navigate(redirectTo)
+      }
+    } catch {
+      // error handled in slice
     }
   }
 
+  const displayError = validationError || error
+
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">Login</h2>
+    <div className="min-h-screen flex flex-col justify-between bg-cover bg-center bg-no-repeat relative overflow-hidden" style={{ backgroundImage: "url('/auth-hero.png')" }}>
+      {/* Overlay for depth and contrast */}
+      <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-[2px] pointer-events-none" />
+      {/* Background ambient glows */}
+      <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-cyan-500/10 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-[10%] right-[-25%] w-[60%] h-[60%] rounded-full bg-emerald-500/5 blur-[150px] pointer-events-none" />
 
-        {error && (
-          <div className="bg-red-100 text-red-700 border border-red-400 px-4 py-3 rounded-lg mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Email</label>
-            <input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            />
+      <div className="flex-1 flex flex-col items-center justify-center p-6 relative z-10">
+        <div className="w-full max-w-md animate-slide-up">
+          <div className="flex justify-center mb-8">
+            <BrandLogo size="lg" />
           </div>
 
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Password</label>
-            <input
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            />
+          <div className="glass-card p-8 bg-theme-surface/40 backdrop-blur-xl border border-white/5 shadow-2xl hover:translate-y-0">
+            <h2 className="text-2xl font-bold text-theme mb-1">Welcome back</h2>
+            <p className="text-theme-muted text-sm mb-6">Sign in to your account</p>
+
+            {displayError && <div className="mb-4"><Alert message={displayError} type="error" onClose={() => { setValidationError(''); dispatch(clearAuthError()) }} /></div>}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-theme-muted mb-1.5">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted" size={16} />
+                  <input type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className="input-field pl-9" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-medium text-theme-muted">Password</label>
+                  <Link to="/forgot-password" className="text-xs text-primary font-semibold hover:opacity-85">
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted" size={16} />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="input-field pl-9 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted hover:text-theme"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-theme text-primary focus:ring-primary/30 bg-theme-surface/50"
+                />
+                <span className="text-sm text-theme-muted">Remember me</span>
+              </label>
+              <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
+                <LogIn size={16} />
+                {loading ? 'Signing in...' : 'Sign In'}
+              </button>
+            </form>
+
+
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 disabled:opacity-50"
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-
-        <p className="text-center text-gray-600 text-sm mt-4">
-          Don't have an account? <a href="/register" className="text-blue-500 hover:underline">Register</a>
-        </p>
+        </div>
       </div>
+      <Footer />
     </div>
   )
 }

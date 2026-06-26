@@ -6,4 +6,5 @@ build/
 .DS_Store
 *.log
 
-/src/generated/prisma
+backend/node_modules/
+frontend/node_modules/
