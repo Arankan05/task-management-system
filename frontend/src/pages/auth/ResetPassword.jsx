@@ -7,6 +7,7 @@ import BrandLogo from '../../components/BrandLogo'
 import { Lock, ArrowLeft, CheckCircle } from 'lucide-react'
 import { PASSWORD_REQUIREMENTS, validatePasswordClient } from '../../utils/passwordPolicy'
 
+/** [FORGOT PASSWORD] Step 3 UI — user sets new password → POST /auth/reset-password → redirect to /login */
 function ResetPassword() {
   const navigate = useNavigate()
   const location = useLocation()

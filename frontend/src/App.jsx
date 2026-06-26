@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 
 const Login = lazy(() => import('./pages/auth/Login'))
 const Register = lazy(() => import('./pages/auth/Register'))
+// [FORGOT PASSWORD] lazy-loaded auth pages for the 3-step reset flow
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const VerifyOtp = lazy(() => import('./pages/auth/VerifyOtp'))
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'))
@@ -52,6 +53,7 @@ function App() {
           <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          {/* [FORGOT PASSWORD] public routes — /forgot-password → /verify-otp → /reset-password */}
           <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
           <Route path="/verify-otp" element={<PublicRoute><VerifyOtp /></PublicRoute>} />
           <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />

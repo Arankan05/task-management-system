@@ -21,6 +21,7 @@ model User {
   address             String?           @db.Text
   dateOfBirth         DateTime?
   gender              String?
+  // [FORGOT PASSWORD] OTP fields — hashed code, expiry, and rate-limit counters (max 3/hour)
   resetOtp            String?
   resetOtpExpires     DateTime?
   resetOtpSendCount   Int               @default(0)

@@ -103,6 +103,7 @@ function Login() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-sm font-medium text-slate-700">Password</label>
+                  {/* [FORGOT PASSWORD] entry point from login page */}
                   <Link to="/forgot-password" className="text-xs text-brand-600 font-semibold hover:text-brand-700">
                     Forgot password?
                   </Link>

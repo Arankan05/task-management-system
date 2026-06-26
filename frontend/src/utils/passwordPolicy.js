@@ -1,3 +1,4 @@
+// [FORGOT PASSWORD] client-side password rules (mirrors backend/src/utils/passwordPolicy.js)
 export const PASSWORD_REQUIREMENTS =
   'At least 8 characters with uppercase, lowercase, number, and special character'
 

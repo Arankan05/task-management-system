@@ -6,6 +6,7 @@ import Footer from '../../components/Footer'
 import BrandLogo from '../../components/BrandLogo'
 import { ShieldCheck, ArrowLeft, KeyRound } from 'lucide-react'
 
+/** [FORGOT PASSWORD] Step 2 UI — user enters 6-digit OTP → POST /auth/verify-reset-otp → redirect to /reset-password */
 function VerifyOtp() {
   const navigate = useNavigate()
   const location = useLocation()
