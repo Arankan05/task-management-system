@@ -3,28 +3,20 @@ import { Link, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   Layers, Settings as SettingsIcon, ChevronDown, ChevronRight, Menu, X,
-  FolderKanban, BarChart3, ListTodo, Columns3, Users, Settings2,
+  FolderKanban, BarChart3, ListTodo, Columns3, Users, Settings2, LayoutDashboard,
 } from 'lucide-react'
 import { fetchWorkspaces } from '../store/slices/workspacesSlice'
 import { getProjects } from '../services/projectService'
 import BrandLogo from './BrandLogo'
-import { canManageWorkspace, normalizeWorkspaceRole } from '../utils/permissions'
-import { WORKSPACE_ROLES } from '../utils/constants'
 
-const HIDDEN_PROJECT = '__workspace_default__'
-
-const workspaceLinks = (workspaceId, memberRole) => {
-  const links = [
-    { to: `/workspaces/${workspaceId}`, state: { tab: 'analyze' }, label: 'Analyze', icon: BarChart3, tab: 'analyze' },
-    { to: `/workspaces/${workspaceId}`, state: { tab: 'tasks' }, label: 'Tasks', icon: ListTodo, tab: 'tasks' },
-    { to: `/workspaces/${workspaceId}/kanban`, label: 'Kanban', icon: Columns3, tab: 'kanban' },
-    { to: `/workspaces/${workspaceId}`, state: { tab: 'team' }, label: 'Team', icon: Users, tab: 'team' },
-  ]
-  if (canManageWorkspace(memberRole)) {
-    links.push({ to: `/workspaces/${workspaceId}/settings`, label: 'Settings', icon: Settings2, tab: 'settings' })
-  }
-  return links
-}
+const projectLinks = (workspaceId, projectId) => [
+  { to: `/workspaces/${workspaceId}/projects/${projectId}`, label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: `/workspaces/${workspaceId}/projects/${projectId}/kanban`, label: 'Kanban', icon: Columns3 },
+  { to: `/workspaces/${workspaceId}/projects/${projectId}/tasks`, label: 'Tasks', icon: ListTodo },
+  { to: `/workspaces/${workspaceId}/projects/${projectId}/team`, label: 'Team', icon: Users },
+  { to: `/workspaces/${workspaceId}/projects/${projectId}/analytics`, label: 'Analytics', icon: BarChart3 },
+  { to: `/workspaces/${workspaceId}/projects/${projectId}/settings`, label: 'Settings', icon: Settings2 },
+]
 
 function Sidebar({ mobileOpen, onClose }) {
   const dispatch = useDispatch()
@@ -32,6 +24,7 @@ function Sidebar({ mobileOpen, onClose }) {
   const { items: workspaces } = useSelector((s) => s.workspaces)
 
   const [expanded, setExpanded] = useState({})
+  const [expandedProjects, setExpandedProjects] = useState({})
   const [projectsMap, setProjectsMap] = useState({})
   const [wsDropdownOpen, setWsDropdownOpen] = useState(true)
 
@@ -42,10 +35,7 @@ function Sidebar({ mobileOpen, onClose }) {
   const loadProjects = useCallback(async (workspaceId) => {
     try {
       const projects = await getProjects(workspaceId)
-      setProjectsMap((prev) => ({
-        ...prev,
-        [workspaceId]: projects.filter((p) => p.name !== HIDDEN_PROJECT),
-      }))
+      setProjectsMap((prev) => ({ ...prev, [workspaceId]: projects }))
     } catch {
       setProjectsMap((prev) => ({ ...prev, [workspaceId]: [] }))
     }
@@ -57,6 +47,11 @@ function Sidebar({ mobileOpen, onClose }) {
       const wsId = match[1]
       setExpanded((prev) => ({ ...prev, [wsId]: true }))
       loadProjects(wsId)
+
+      const projectMatch = location.pathname.match(/\/projects\/([^/]+)/)
+      if (projectMatch) {
+        setExpandedProjects((prev) => ({ ...prev, [projectMatch[1]]: true }))
+      }
     }
   }, [location.pathname, loadProjects])
 
@@ -66,18 +61,15 @@ function Sidebar({ mobileOpen, onClose }) {
     if (next) loadProjects(workspaceId)
   }
 
+  const toggleProject = (projectId) => {
+    setExpandedProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }))
+  }
+
   const isGlobalActive = (to) => location.pathname === to || location.pathname.startsWith(`${to}/`)
 
-  const isLinkActive = (wsId, link) => {
-    const base = `/workspaces/${wsId}`
-    if (link.tab === 'settings') return location.pathname === `${base}/settings`
-    if (link.tab === 'kanban') return location.pathname === `${base}/kanban`
-    if (location.pathname.startsWith(`${base}/tasks/`)) return link.tab === 'tasks'
-    if (location.pathname === base) {
-      const currentTab = location.state?.tab || 'tasks'
-      return link.tab === currentTab
-    }
-    return false
+  const isProjectLinkActive = (link) => {
+    if (link.end) return location.pathname === link.to
+    return location.pathname === link.to || location.pathname.startsWith(`${link.to}/`)
   }
 
   const navLinkClass = (active) =>
@@ -123,7 +115,8 @@ function Sidebar({ mobileOpen, onClose }) {
       {wsDropdownOpen && workspaces.map((ws) => {
         const isOpen = expanded[ws.id]
         const projects = projectsMap[ws.id] || []
-        const wsActive = location.pathname.includes(`/workspaces/${ws.id}`)
+        const wsBase = `/workspaces/${ws.id}`
+        const wsOverviewActive = location.pathname === wsBase
 
         return (
           <div key={ws.id} className="mb-0.5">
@@ -131,7 +124,7 @@ function Sidebar({ mobileOpen, onClose }) {
               type="button"
               onClick={() => toggleWorkspace(ws.id)}
               className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                wsActive ? 'text-theme bg-white/5 shadow-sm border border-white/5' : 'text-theme-muted hover:text-theme hover:bg-white/5'
+                location.pathname.includes(wsBase) ? 'text-theme bg-white/5 shadow-sm border border-white/5' : 'text-theme-muted hover:text-theme hover:bg-white/5'
               }`}
             >
               {isOpen ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
@@ -146,41 +139,50 @@ function Sidebar({ mobileOpen, onClose }) {
 
             {isOpen && (
               <div className="ml-3 mt-1 pl-3 border-l border-white/5 space-y-0.5">
-                {projects.length > 0 && (
-                  <>
-                    <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-theme-muted uppercase tracking-wider">Projects</p>
-                    {projects.map((project) => {
-                      const projectPath = `/workspaces/${ws.id}/projects/${project.id}`
-                      const projectActive = location.pathname === projectPath
-                      return (
-                        <Link
-                          key={project.id}
-                          to={projectPath}
-                          onClick={onClose}
-                          className={subLinkClass(projectActive)}
-                        >
-                          <FolderKanban size={14} className="shrink-0" />
-                          <span className="truncate">{project.name}</span>
-                        </Link>
-                      )
-                    })}
-                  </>
-                )}
+                <Link
+                  to={wsBase}
+                  onClick={onClose}
+                  className={subLinkClass(wsOverviewActive)}
+                >
+                  <LayoutDashboard size={14} className="shrink-0" />
+                  Overview
+                </Link>
 
-                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-theme-muted uppercase tracking-wider">Workspace</p>
-                {workspaceLinks(ws.id, normalizeWorkspaceRole(ws.memberRole || WORKSPACE_ROLES.ADMINISTRATOR)).map(({ to, state, label, icon: Icon, tab }) => {
-                  const active = isLinkActive(ws.id, { tab })
+                {projects.map((project) => {
+                  const projectOpen = expandedProjects[project.id]
+                  const projectBase = `${wsBase}/projects/${project.id}`
+                  const inProject = location.pathname.startsWith(projectBase)
+
                   return (
-                    <Link
-                      key={label}
-                      to={to}
-                      state={state}
-                      onClick={onClose}
-                      className={subLinkClass(active)}
-                    >
-                      <Icon size={14} className="shrink-0" />
-                      {label}
-                    </Link>
+                    <div key={project.id}>
+                      <button
+                        type="button"
+                        onClick={() => toggleProject(project.id)}
+                        className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                          inProject ? 'text-theme bg-white/5' : 'text-theme-muted hover:text-theme hover:bg-white/5'
+                        }`}
+                      >
+                        {projectOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                        <FolderKanban size={14} className="shrink-0" />
+                        <span className="truncate text-left">{project.name}</span>
+                      </button>
+
+                      {projectOpen && (
+                        <div className="ml-4 mt-0.5 space-y-0.5">
+                          {projectLinks(ws.id, project.id).map((link) => (
+                            <Link
+                              key={link.label}
+                              to={link.to}
+                              onClick={onClose}
+                              className={subLinkClass(isProjectLinkActive(link))}
+                            >
+                              <link.icon size={13} className="shrink-0" />
+                              {link.label}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )
                 })}
               </div>
@@ -193,11 +195,7 @@ function Sidebar({ mobileOpen, onClose }) {
 
   const SettingsLink = () => (
     <div className="shrink-0 p-4 border-t border-white/5">
-      <Link
-        to="/settings"
-        onClick={onClose}
-        className={navLinkClass(isGlobalActive('/settings'))}
-      >
+      <Link to="/settings" onClick={onClose} className={navLinkClass(isGlobalActive('/settings'))}>
         <SettingsIcon size={18} />
         Settings
       </Link>
@@ -206,7 +204,7 @@ function Sidebar({ mobileOpen, onClose }) {
 
   return (
     <>
-      <aside className="hidden lg:flex w-64 bg-theme-surface/20 backdrop-blur-lg border border-white/5 rounded-3xl shadow-xl sticky top-28 self-start h-[calc(100vh-9.5rem)] flex-col shrink-0 transition-all duration-300">
+      <aside className="hidden lg:flex w-64 bg-theme-surface/20 backdrop-blur-lg border border-white/5 rounded-3xl shadow-xl sticky top-28 self-start shrink-0 h-[calc(100vh-9.5rem)] flex-col transition-all duration-300">
         <div className="px-6 py-5 border-b border-white/5 shrink-0">
           <p className="text-xs font-semibold text-theme-muted uppercase tracking-wider">Navigation</p>
         </div>
