@@ -36,6 +36,9 @@ const listWorkspaces = async (req, res) => {
 
 const createWorkspace = async (req, res) => {
   try {
+    if (req.user?.role === "ADMINISTRATOR") {
+      return errorResponse(res, "Administrators cannot create workspaces", 403);
+    }
     const { name, description, color } = req.body;
     if (!name?.trim()) return errorResponse(res, "Workspace name is required", 400);
 

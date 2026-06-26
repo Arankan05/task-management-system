@@ -12,6 +12,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
 const workspaceRoutes = require("./routes/workspaceRoutes");
 const projectNestedRoutes = require("./routes/projectRoutes");
 const taskRoutes = require("./routes/taskRoutes");
@@ -54,6 +55,7 @@ app.use(helmet());
 app.use(morgan("dev"));
 
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/workspaces/:workspaceId/projects", projectNestedRoutes);
 

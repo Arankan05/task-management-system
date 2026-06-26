@@ -4,7 +4,7 @@ import Loader from './ui/Loader'
 
 function ProtectedRoute({ children }) {
   const location = useLocation()
-  const { isAuthenticated, initialized, mustResetPassword } = useSelector((state) => state.auth)
+  const { isAuthenticated, initialized, mustResetPassword, user } = useSelector((state) => state.auth)
 
   if (!initialized) {
     return (
@@ -21,6 +21,18 @@ function ProtectedRoute({ children }) {
   if (mustResetPassword && location.pathname !== '/mandatory-reset') {
     return <Navigate to="/mandatory-reset" replace />
   }
+
+  // Enforce global RBAC client-side route restrictions
+  if (user?.role === 'ADMINISTRATOR') {
+    if (location.pathname.startsWith('/workspaces')) {
+      return <Navigate to="/users" replace />
+    }
+  } else {
+    if (location.pathname.startsWith('/users')) {
+      return <Navigate to="/workspaces" replace />
+    }
+  }
+
   return children
 }
 

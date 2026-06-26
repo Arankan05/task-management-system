@@ -19,22 +19,27 @@ const ProjectDashboard = lazy(() => import('./pages/ProjectDashboard'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Settings = lazy(() => import('./pages/Settings'))
 const NotFound = lazy(() => import('./pages/NotFound'))
+const UserManagement = lazy(() => import('./pages/UserManagement'))
 
 function MandatoryResetRoute({ children }) {
-  const { isAuthenticated, initialized, mustResetPassword } = useSelector((state) => state.auth)
+  const { isAuthenticated, initialized, mustResetPassword, user } = useSelector((state) => state.auth)
   if (!initialized) return <BootScreen />
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  if (!mustResetPassword) return <Navigate to="/workspaces" replace />
+  if (!mustResetPassword) {
+    const target = user?.role === 'ADMINISTRATOR' ? '/users' : '/workspaces'
+    return <Navigate to={target} replace />
+  }
   return children
 }
 
 function PublicRoute({ children }) {
-  const { isAuthenticated, initialized, mustResetPassword } = useSelector((state) => state.auth)
+  const { isAuthenticated, initialized, mustResetPassword, user } = useSelector((state) => state.auth)
   const params = new URLSearchParams(window.location.search)
   const redirect = params.get('redirect')
   if (initialized && isAuthenticated) {
     if (mustResetPassword) return <Navigate to="/mandatory-reset" replace />
-    return <Navigate to={redirect || '/workspaces'} replace />
+    const target = user?.role === 'ADMINISTRATOR' ? '/users' : '/workspaces'
+    return <Navigate to={redirect || target} replace />
   }
   return children
 }
@@ -42,6 +47,12 @@ function PublicRoute({ children }) {
 function LegacyProjectRedirect() {
   const { workspaceId } = useParams()
   return <Navigate to={`/workspaces/${workspaceId}`} replace />
+}
+
+function DynamicDashboardRedirect() {
+  const { user } = useSelector((state) => state.auth)
+  const target = user?.role === 'ADMINISTRATOR' ? '/users' : '/workspaces'
+  return <Navigate to={target} replace />
 }
 
 function App() {
@@ -66,9 +77,11 @@ function App() {
           <Route path="/workspaces/:workspaceId/projects/:projectId" element={<ProtectedRoute><ProjectDashboard /></ProtectedRoute>} />
           <Route path="/workspaces/:workspaceId/projects/:projectId/*" element={<ProtectedRoute><LegacyProjectRedirect /></ProtectedRoute>} />
 
-          <Route path="/dashboard" element={<Navigate to="/workspaces" replace />} />
-          <Route path="/tasks" element={<Navigate to="/workspaces" replace />} />
-          <Route path="/kanban" element={<Navigate to="/workspaces" replace />} />
+          <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+
+          <Route path="/dashboard" element={<ProtectedRoute><DynamicDashboardRedirect /></ProtectedRoute>} />
+          <Route path="/tasks" element={<ProtectedRoute><DynamicDashboardRedirect /></ProtectedRoute>} />
+          <Route path="/kanban" element={<ProtectedRoute><DynamicDashboardRedirect /></ProtectedRoute>} />
 
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

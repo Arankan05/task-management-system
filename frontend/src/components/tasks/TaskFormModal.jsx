@@ -5,6 +5,7 @@ import Alert from '../ui/Alert'
 import { createTask, updateTask } from '../../store/slices/tasksSlice'
 import { getWorkspaceMembers } from '../../services/workspaceService'
 import { validateTaskForm } from '../../utils/taskHelpers'
+import api from '../../services/api'
 import { TASK_STATUSES, TASK_PRIORITIES, STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants'
 
 const emptyForm = {
@@ -25,10 +26,20 @@ function TaskFormModal({ isOpen, onClose, task = null, projectId, workspaceId, o
   const [members, setMembers] = useState([])
 
   useEffect(() => {
-    if (workspaceId && isOpen) {
-      getWorkspaceMembers(workspaceId).then(setMembers).catch(() => setMembers([]))
+    if (isOpen) {
+      api.get('/users')
+        .then(({ data }) => {
+          const assignable = (data.data || [])
+            .filter((u) => u.role !== 'ADMINISTRATOR')
+            .map((u) => ({
+              userId: u.id,
+              user: u,
+            }))
+          setMembers(assignable)
+        })
+        .catch(() => setMembers([]))
     }
-  }, [workspaceId, isOpen])
+  }, [isOpen])
 
   useEffect(() => {
     if (task) {

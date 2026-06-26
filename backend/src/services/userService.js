@@ -182,6 +182,207 @@ const setUserActive = async (workspaceId, userId, isActive, actorId) => {
   return { ...user, role: member.role };
 };
 
+const listAllUsers = async ({ search, role, status }) => {
+  const where = {};
+  if (role) {
+    where.role = role;
+  }
+  const userFilter = {};
+  if (search?.trim()) {
+    const q = search.trim();
+    userFilter.OR = [
+      { name: { contains: q } },
+      { email: { contains: q } },
+    ];
+  }
+  if (status === "active") {
+    userFilter.isActive = true;
+  } else if (status === "inactive") {
+    userFilter.isActive = false;
+  }
+  if (Object.keys(userFilter).length > 0) {
+    Object.assign(where, userFilter);
+  }
+
+  return prisma.user.findMany({
+    where,
+    select: USER_PUBLIC_SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+};
+
+const createGlobalUser = async ({ name, email, role }) => {
+  if (!VALID_ROLES.includes(role)) {
+    const err = new Error("Invalid role");
+    err.status = 400;
+    throw err;
+  }
+
+  const normalized = String(email).trim().toLowerCase();
+  const existing = await prisma.user.findUnique({ where: { email: normalized } });
+  if (existing) {
+    const err = new Error("A user with this email already exists");
+    err.status = 409;
+    throw err;
+  }
+
+  const tempPassword = generateTempPassword();
+  const hashedPassword = await bcrypt.hash(tempPassword, 10);
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+  const created = await prisma.user.create({
+    data: {
+      name: String(name).trim(),
+      email: normalized,
+      role,
+      password: hashedPassword,
+      mustResetPassword: true,
+      isActive: true,
+      tempPasswordExpiresAt: expiresAt,
+    },
+    select: USER_PUBLIC_SELECT,
+  });
+
+  let emailSent = false;
+  try {
+    await sendWelcomeUserEmail({
+      to: normalized,
+      name: created.name,
+      emailAddress: normalized,
+      tempPassword,
+      expiresInHours: 24,
+    });
+    emailSent = true;
+  } catch (emailErr) {
+    console.warn("Could not send welcome email:", emailErr.message);
+  }
+
+  return { user: created, tempPassword: emailSent ? undefined : tempPassword, emailSent };
+};
+
+const updateGlobalUser = async (userId, { name, role }) => {
+  const data = {};
+  if (name) data.name = name.trim();
+  if (role) {
+    if (!VALID_ROLES.includes(role)) {
+      const err = new Error("Invalid role");
+      err.status = 400;
+      throw err;
+    }
+    data.role = role;
+  }
+
+  return prisma.user.update({
+    where: { id: userId },
+    data,
+    select: USER_PUBLIC_SELECT,
+  });
+};
+
+const setGlobalUserActive = async (userId, isActive, actorId) => {
+  if (userId === actorId) {
+    const err = new Error("You cannot change your own activation status");
+    err.status = 400;
+    throw err;
+  }
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { isActive },
+    select: USER_PUBLIC_SELECT,
+  });
+
+  if (!isActive) {
+    await revokeAllUserRefreshTokens(userId);
+  }
+
+  return user;
+};
+
+const deleteGlobalUser = async (userId, actorId) => {
+  if (userId === actorId) {
+    const err = new Error("You cannot delete your own account");
+    err.status = 400;
+    throw err;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    const err = new Error("User not found");
+    err.status = 404;
+    throw err;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Delete workspace invitations sent by this user
+    await tx.workspaceInvitation.deleteMany({
+      where: { invitedById: userId },
+    });
+
+    // 2. Delete workspace join requests where user is the subject or the inviter
+    await tx.workspaceJoinRequest.deleteMany({
+      where: {
+        OR: [
+          { userId },
+          { invitedById: userId },
+        ],
+      },
+    });
+
+    // 3. Set assignedToId to null for all tasks assigned to this user
+    await tx.task.updateMany({
+      where: { assignedToId: userId },
+      data: { assignedToId: null },
+    });
+
+    // 4. Delete all comments made by this user
+    await tx.comment.deleteMany({
+      where: { userId },
+    });
+
+    // 5. Delete all attachments uploaded by this user
+    await tx.attachment.deleteMany({
+      where: { userId },
+    });
+
+    // 6. Reassign createdById on tasks created by this user to actorId
+    await tx.task.updateMany({
+      where: { createdById: userId },
+      data: { createdById: actorId },
+    });
+
+    // 7. Reassign createdById on projects created by this user to actorId
+    await tx.project.updateMany({
+      where: { createdById: userId },
+      data: { createdById: actorId },
+    });
+
+    // 8. Delete workspaces owned by this user (cascades to their items)
+    const ownedWorkspaces = await tx.workspace.findMany({
+      where: { ownerId: userId },
+      select: { id: true },
+    });
+    for (const ws of ownedWorkspaces) {
+      await tx.workspace.delete({
+        where: { id: ws.id },
+      });
+    }
+
+    // 9. Delete workspace memberships for this user
+    await tx.workspaceMember.deleteMany({
+      where: { userId },
+    });
+
+    // 10. Delete the user record itself
+    await tx.user.delete({
+      where: { id: userId },
+    });
+  });
+
+  await revokeAllUserRefreshTokens(userId);
+  return user;
+};
+
 module.exports = {
   USER_PUBLIC_SELECT,
   listUsers,
@@ -189,4 +390,9 @@ module.exports = {
   getWorkspaceUser,
   updateUser,
   setUserActive,
+  listAllUsers,
+  createGlobalUser,
+  updateGlobalUser,
+  setGlobalUserActive,
+  deleteGlobalUser,
 };
