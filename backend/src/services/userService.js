@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const prisma = require("../config/db");
 const { generateTempPassword } = require("../utils/passwordPolicy");
+const { buildTempPasswordCreateData } = require("../utils/userAccountHelper");
 const { sendWelcomeUserEmail } = require("./emailService");
 const { revokeAllUserRefreshTokens } = require("./authTokenService");
 const { VALID_ROLES } = require("../utils/workspaceRoles");
@@ -94,6 +95,7 @@ const createUser = async (workspaceId, { name, email, role }) => {
 
   const tempPassword = generateTempPassword();
   const hashedPassword = await bcrypt.hash(tempPassword, 10);
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
@@ -101,9 +103,8 @@ const createUser = async (workspaceId, { name, email, role }) => {
         name,
         email,
         role,
-        password: hashedPassword,
-        mustResetPassword: true,
         isActive: true,
+        ...buildTempPasswordCreateData(hashedPassword, expiresAt),
       },
       select: USER_PUBLIC_SELECT,
     });

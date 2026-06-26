@@ -147,6 +147,8 @@ router.get("/:id/stats", projectCtrl.getProjectStats);
 
 router.get("/:id/members", projectMemberCtrl.listMembers);
 router.post("/:id/members", projectMemberCtrl.addMember);
+router.get("/:id/invitations", projectMemberCtrl.listInvitations);
+router.post("/:id/invitations/:invitationId/resend", projectMemberCtrl.resendInvitation);
 router.delete("/:id/members/:userId", projectMemberCtrl.removeMember);
 router.get("/:id/my-role", projectMemberCtrl.getMyProjectRole);
 

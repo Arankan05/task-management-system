@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const prisma = require("../config/db");
 const { generateTempPassword } = require("../utils/passwordPolicy");
+const { buildTempPasswordCreateData } = require("../utils/userAccountHelper");
 const { sendWelcomeUserEmail } = require("./emailService");
 const { revokeAllUserRefreshTokens } = require("./authTokenService");
 const { VALID_ROLES, ROLE_LABELS } = require("../utils/workspaceRoles");
@@ -88,10 +89,8 @@ const createPendingWorkspaceUser = async (workspaceId, { name, email, role, invi
         name: String(name).trim(),
         email: normalizedEmail,
         role,
-        password: hashedPassword,
-        mustResetPassword: true,
         isActive: true,
-        tempPasswordExpiresAt: expiresAt,
+        ...buildTempPasswordCreateData(hashedPassword, expiresAt),
       },
     });
 
@@ -300,12 +299,7 @@ const recreateJoinRequest = async (workspaceId, requestId, invitedById, io = nul
   const { updated, notification } = await prisma.$transaction(async (tx) => {
     await tx.user.update({
       where: { id: request.userId },
-      data: {
-        password: hashedPassword,
-        mustResetPassword: true,
-        isActive: true,
-        tempPasswordExpiresAt: expiresAt,
-      },
+      data: buildTempPasswordCreateData(hashedPassword, expiresAt),
     });
 
     const joinRequest = await tx.workspaceJoinRequest.update({
