@@ -76,6 +76,7 @@ router.get("/session", getSession);
 router.post("/refresh", refreshAccessToken);
 router.post("/logout", logoutUser);
 
+// [FORGOT PASSWORD] Step 1: request OTP | Step 2: verify OTP | Step 3: set new password
 router.post("/forgot-password", forgotPassword);
 router.post("/verify-reset-otp", verifyResetOtp);
 router.post("/reset-password", resetPassword);

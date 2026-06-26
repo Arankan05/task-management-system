@@ -6,6 +6,7 @@ import Footer from '../../components/Footer'
 import BrandLogo, { APP_NAME } from '../../components/BrandLogo'
 import { Mail, ArrowLeft, Send } from 'lucide-react'
 
+/** [FORGOT PASSWORD] Step 1 UI — user enters email → POST /auth/forgot-password → redirect to /verify-otp */
 function ForgotPassword() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
