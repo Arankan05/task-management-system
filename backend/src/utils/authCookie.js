@@ -1,7 +1,7 @@
 const ACCESS_COOKIE = "token";
 const REFRESH_COOKIE = "refreshToken";
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === "production" || (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes("localhost"));
 
 const getBaseCookieOptions = () => ({
   httpOnly: true,
