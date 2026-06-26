@@ -202,77 +202,26 @@ const removeMember = async (req, res) => {
   }
 };
 
-const listTasks = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const role = await getWorkspaceRole(req.user.id, id);
-    if (!role) return errorResponse(res, "Access denied", 403);
+const listTasks = async (req, res) =>
+  errorResponse(
+    res,
+    "Tasks are managed at the project level. Use GET /api/projects/:projectId/tasks",
+    410
+  );
 
-    const project = await getDefaultProject(id, req.user.id);
-    const { status, priority, assignedToId, search, sort, labelId } = req.query;
-    const filters = getTaskListFiltersForRole(role, req.user.id, {
-      status,
-      priority,
-      assignedToId,
-      search,
-      sort,
-      labelId,
-    });
-    const tasks = await taskService.getTasksByProject(project.id, filters);
-    return successResponse(res, "Tasks fetched", tasks);
-  } catch (error) {
-    console.error(error);
-    return errorResponse(res, "Failed to fetch tasks", 500);
-  }
-};
+const createTask = async (req, res) =>
+  errorResponse(
+    res,
+    "Tasks are managed at the project level. Use POST /api/projects/:projectId/tasks",
+    410
+  );
 
-const createTask = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const permission = await assertCanManageTasks(req.user.id, id);
-    if (!permission.ok) return errorResponse(res, permission.message, 403);
-
-    const { title, description, status, priority, progress, dueDate, assignedToId } = req.body;
-    if (!title?.trim()) return errorResponse(res, "Title is required", 400);
-
-    const project = await getDefaultProject(id, req.user.id);
-    const task = await taskService.createTask({
-      title,
-      description,
-      status,
-      priority,
-      progress,
-      dueDate,
-      assignedToId,
-      projectId: project.id,
-      createdById: req.user.id,
-    });
-
-    const io = req.app.get("io");
-    io.to(`workspace:${id}`).emit("task:created", { task });
-    await notifyTaskAssigned(io, task, req.user.id, req.user?.name || req.user?.email);
-
-    return successResponse(res, "Task created", task, 201);
-  } catch (error) {
-    console.error(error);
-    return errorResponse(res, "Failed to create task", 500);
-  }
-};
-
-const getStats = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!(await isWorkspaceMember(req.user.id, id))) {
-      return errorResponse(res, "Access denied", 403);
-    }
-    const project = await getDefaultProject(id, req.user.id);
-    const stats = await projectService.getProjectStats(project.id);
-    return successResponse(res, "Stats fetched", stats);
-  } catch (error) {
-    console.error(error);
-    return errorResponse(res, "Failed to fetch stats", 500);
-  }
-};
+const getStats = async (req, res) =>
+  errorResponse(
+    res,
+    "Analytics are available per project. Use GET /api/projects/:projectId/stats",
+    410
+  );
 
 module.exports = {
   listWorkspaces,

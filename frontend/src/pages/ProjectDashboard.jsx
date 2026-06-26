@@ -5,6 +5,7 @@ import { ListTodo, CheckCircle2, Clock, AlertTriangle, TrendingUp } from 'lucide
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import Layout from '../components/Layout'
 import PageHeader from '../components/ui/PageHeader'
+import ProjectTabs from '../components/project/ProjectTabs'
 import StatCard from '../components/ui/StatCard'
 import Loader from '../components/ui/Loader'
 import { fetchProjectStats, setActiveProject } from '../store/slices/projectsSlice'
@@ -18,6 +19,7 @@ function ProjectDashboard() {
   const dispatch = useDispatch()
   const { stats, loading } = useSelector((s) => s.projects)
   const [project, setProject] = useState(null)
+  const base = `/workspaces/${workspaceId}/projects/${projectId}`
 
   useEffect(() => {
     dispatch(setActiveProjectId(projectId))
@@ -27,8 +29,10 @@ function ProjectDashboard() {
   }, [dispatch, projectId])
 
   const statusData = stats ? [
+    { name: 'Backlog', value: stats.backlog || 0 },
     { name: 'To Do', value: stats.todo },
     { name: 'In Progress', value: stats.inProgress },
+    { name: 'Review', value: stats.review || 0 },
     { name: 'Done', value: stats.done },
   ] : []
 
@@ -56,11 +60,13 @@ function ProjectDashboard() {
           title={project?.name || 'Project Overview'}
           subtitle={project?.description || 'Project statistics and recent activity'}
           actions={
-            <Link to={`/workspaces/${workspaceId}`} className="btn-secondary">
-              <ListTodo size={16} /> Workspace Tasks
+            <Link to={`${base}/tasks`} className="btn-secondary">
+              <ListTodo size={16} /> View Tasks
             </Link>
           }
         />
+
+        <ProjectTabs activeTab="analyze" />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
           <StatCard title="Total Tasks" value={stats?.total || 0} icon={ListTodo} color="brand" sub="All project tasks" />
@@ -116,7 +122,7 @@ function ProjectDashboard() {
               {stats.recentTasks.map((t) => (
                 <Link
                   key={t.id}
-                  to={`/workspaces/${workspaceId}/tasks/${t.id}`}
+                  to={`/workspaces/${workspaceId}/projects/${projectId}/tasks/${t.id}`}
                   className="flex items-center justify-between px-6 py-3.5 hover:bg-theme-surface/50 transition-colors"
                 >
                   <span className="text-sm font-medium text-theme">{t.title}</span>

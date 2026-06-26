@@ -1,6 +1,8 @@
 const variants = {
-  TODO: 'bg-slate-500/10 text-slate-400 ring-slate-500/20',
+  BACKLOG: 'bg-slate-500/10 text-slate-400 ring-slate-500/20',
+  TODO: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
   IN_PROGRESS: 'bg-amber-500/10 text-amber-400 ring-amber-500/20',
+  REVIEW: 'bg-purple-500/10 text-purple-400 ring-purple-500/20',
   COMPLETED: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
   DONE: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
   LOW: 'bg-cyan-500/10 text-cyan-400 ring-cyan-500/20',

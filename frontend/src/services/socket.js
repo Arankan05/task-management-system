@@ -23,7 +23,6 @@ function attachListeners() {
 
   socket.on('connect_error', () => {
     if (!connectionWarningShown) {
-      console.warn('[TASKPULSE] Real-time connection failed. Start backend: npm run dev')
       connectionWarningShown = true
     }
   })

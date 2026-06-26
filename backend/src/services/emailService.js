@@ -19,6 +19,7 @@ const transporter =
           })
         : null;
 
+// [FORGOT PASSWORD] OTP email — sent when user requests a password reset
 const OTP_EXPIRY_MINUTES = 10;
 
 function buildOtpEmailHtml(name, otp) {
@@ -64,6 +65,7 @@ function buildOtpEmailHtml(name, otp) {
 </html>`;
 }
 
+/** [FORGOT PASSWORD] Sends the 6-digit OTP to the user's inbox (requires EMAIL_USER / EMAIL_PASS). */
 async function sendPasswordResetOtp(email, name, otp) {
     if (!transporter) {
         throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");

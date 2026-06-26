@@ -14,7 +14,7 @@ function WorkspaceTabs({ activeTab, onTabChange }) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const handleClick = (id, path) => {
+  const handleClick = (id) => {
     if (id === 'settings') {
       navigate(`/workspaces/${workspaceId}/settings`)
       return
@@ -39,11 +39,11 @@ function WorkspaceTabs({ activeTab, onTabChange }) {
 
   return (
     <div className="flex gap-1 p-1 rounded-xl bg-theme-surface border border-theme mb-6 w-fit flex-wrap">
-      {TABS.map(({ id, label, icon: Icon, path }) => (
+      {TABS.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
           type="button"
-          onClick={() => handleClick(id, path)}
+          onClick={() => handleClick(id)}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             isActive(id)
               ? 'bg-primary text-white shadow-sm'
