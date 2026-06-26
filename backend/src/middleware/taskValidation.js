@@ -24,11 +24,11 @@ const validateCreateTask = (req, res, next) => {
   }
 
   // Status validation
-  const validStatuses = ["TODO", "IN_PROGRESS", "COMPLETED"];
+  const validStatuses = ["TODO", "IN_PROGRESS", "DONE"];
   if (status && !validStatuses.includes(status)) {
     return res.status(400).json({
       success: false,
-      message: "Invalid status. Must be TODO, IN_PROGRESS, or COMPLETED",
+      message: "Invalid status. Must be TODO, IN_PROGRESS, or DONE",
     });
   }
 
@@ -88,11 +88,11 @@ const validateUpdateTask = (req, res, next) => {
     req.body.title = title.trim();
   }
 
-  const validStatuses = ["TODO", "IN_PROGRESS", "COMPLETED"];
+  const validStatuses = ["TODO", "IN_PROGRESS", "DONE"];
   if (status && !validStatuses.includes(status)) {
     return res.status(400).json({
       success: false,
-      message: "Invalid status. Must be TODO, IN_PROGRESS, or COMPLETED",
+      message: "Invalid status. Must be TODO, IN_PROGRESS, or DONE",
     });
   }
 
