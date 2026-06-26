@@ -13,6 +13,7 @@ const {
     verifyResetOtp,
     resetPassword,
     forceResetPassword,
+    bootstrapAdmin,
 } = require("../controllers/authController");
 
 const authMiddleware = require("../middleware/authMiddleware");
@@ -20,6 +21,41 @@ const authMiddleware = require("../middleware/authMiddleware");
 const validateRegister = require(
     "../middleware/validateRegister"
 );
+
+/**
+ * @swagger
+ * /api/auth/bootstrap:
+ *   post:
+ *     summary: Bootstrap initial Administrator
+ *     description: Creates the initial Administrator user for the system. This is a one-time bootstrap process. If an Administrator already exists in the database, this request is permanently disabled.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Admin User
+ *               email:
+ *                 type: string
+ *                 example: admin@example.com
+ *     responses:
+ *       201:
+ *         description: Administrator bootstrapped successfully
+ *       400:
+ *         description: Invalid input parameters or user already exists
+ *       403:
+ *         description: Bootstrap process disabled (an Administrator already exists)
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/bootstrap", bootstrapAdmin);
 
 /**
  * @swagger
