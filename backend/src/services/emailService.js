@@ -2,11 +2,16 @@ const nodemailer = require("nodemailer");
 
 const EMAIL_USER = (process.env.EMAIL_USER || "").trim();
 const EMAIL_PASS = (process.env.EMAIL_PASS || "").trim();
+const EMAIL_HOST = (process.env.EMAIL_HOST || "").trim();
+const EMAIL_PORT = Number(process.env.EMAIL_PORT || 587);
 
 const transporter =
     EMAIL_USER && EMAIL_PASS
         ? nodemailer.createTransport({
-              service: "gmail",
+              host: EMAIL_HOST || undefined,
+              port: EMAIL_HOST ? EMAIL_PORT : undefined,
+              secure: false,
+              service: EMAIL_HOST ? undefined : "gmail",
               auth: {
                   user: EMAIL_USER,
                   pass: EMAIL_PASS,
