@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require("../middleware/authMiddleware");
 const ensurePasswordChanged = require("../middleware/ensurePasswordChanged");
 const projectCtrl = require("../controllers/projectController");
+const projectMemberCtrl = require("../controllers/projectMemberController");
 const taskCtrl = require("../controllers/taskController");
 
 router.use(auth);
@@ -143,6 +144,11 @@ router.delete("/:id", projectCtrl.deleteProject);
  *         description: Internal server error
  */
 router.get("/:id/stats", projectCtrl.getProjectStats);
+
+router.get("/:id/members", projectMemberCtrl.listMembers);
+router.post("/:id/members", projectMemberCtrl.addMember);
+router.delete("/:id/members/:userId", projectMemberCtrl.removeMember);
+router.get("/:id/my-role", projectMemberCtrl.getMyProjectRole);
 
 /**
  * @swagger
