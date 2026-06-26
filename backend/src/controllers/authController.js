@@ -15,9 +15,9 @@ const {
 const { sendPasswordResetOtp, OTP_EXPIRY_MINUTES, sendWelcomeUserEmail } = require("../services/emailService");
 const { validatePassword, generateTempPassword } = require("../utils/passwordPolicy");
 
-const OTP_MAX_REQUESTS = 3;
+const OTP_MAX_REQUESTS = 3; // max OTP emails per user per hour
 const OTP_WINDOW_MS = 60 * 60 * 1000;
-const RESET_TOKEN_EXPIRY = "15m";
+const RESET_TOKEN_EXPIRY = "15m"; // short-lived JWT after OTP is verified
 
 const GENERIC_FORGOT_MSG =
     "If that email is registered, we sent a verification code.";
@@ -265,6 +265,7 @@ const updateProfile = async (req, res) => {
     }
 };
 
+/** [FORGOT PASSWORD] Step 1 — POST /api/auth/forgot-password: generate OTP, email it, store hash in DB. */
 const forgotPassword = async (req, res) => {
     try {
         const email = (req.body.email || "").trim().toLowerCase();
@@ -335,6 +336,7 @@ const forgotPassword = async (req, res) => {
     }
 };
 
+/** [FORGOT PASSWORD] Step 2 — POST /api/auth/verify-reset-otp: validate OTP, return JWT resetToken. */
 const verifyResetOtp = async (req, res) => {
     try {
         const email = (req.body.email || "").trim().toLowerCase();
@@ -378,6 +380,7 @@ const verifyResetOtp = async (req, res) => {
     }
 };
 
+/** [FORGOT PASSWORD] Step 3 — POST /api/auth/reset-password: verify JWT, save new password, clear OTP fields. */
 const resetPassword = async (req, res) => {
     try {
         const { resetToken, newPassword } = req.body;

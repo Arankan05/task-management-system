@@ -1,3 +1,4 @@
+// [FORGOT PASSWORD] server-side password rules used by resetPassword endpoint
 const MIN_LENGTH = 8;
 
 const validatePassword = (password) => {

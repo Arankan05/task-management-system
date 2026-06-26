@@ -153,9 +153,9 @@ function TaskFormModal({ isOpen, onClose, task = null, projectId, workspaceId, o
           </div>
         </div>
 
-        {workspaceId && members.length > 0 && (
+        {members.length > 0 && (
           <div>
-            <label className="label-field">Assign to</label>
+            <label className="label-field">Assign Member</label>
             <select
               value={form.assignedToId}
               onChange={(e) => handleChange('assignedToId', e.target.value)}
