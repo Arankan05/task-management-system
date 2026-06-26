@@ -2,27 +2,22 @@ const nodemailer = require("nodemailer");
 
 const EMAIL_USER = (process.env.EMAIL_USER || "").trim();
 const EMAIL_PASS = (process.env.EMAIL_PASS || "").trim();
-const EMAIL_HOST = (process.env.EMAIL_HOST || "").trim();
-const EMAIL_PORT = Number(process.env.EMAIL_PORT || 587);
 
 const transporter =
-    EMAIL_USER && EMAIL_PASS
-        ? nodemailer.createTransport({
-              host: EMAIL_HOST || undefined,
-              port: EMAIL_HOST ? EMAIL_PORT : undefined,
-              secure: false,
-              service: EMAIL_HOST ? undefined : "gmail",
-              auth: {
-                  user: EMAIL_USER,
-                  pass: EMAIL_PASS,
-              },
-          })
-        : null;
+  EMAIL_USER && EMAIL_PASS
+    ? nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: EMAIL_USER,
+        pass: EMAIL_PASS,
+      },
+    })
+    : null;
 
 const OTP_EXPIRY_MINUTES = 10;
 
 function buildOtpEmailHtml(name, otp) {
-    return `
+  return `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -65,28 +60,28 @@ function buildOtpEmailHtml(name, otp) {
 }
 
 async function sendPasswordResetOtp(email, name, otp) {
-    if (!transporter) {
-        throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
-    }
+  if (!transporter) {
+    throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
+  }
 
-    await transporter.sendMail({
-        from: `"TASKPULSE" <${EMAIL_USER}>`,
-        to: email,
-        subject: "Your TASKPULSE password reset code",
-        html: buildOtpEmailHtml(name, otp),
-        text: `Your TASKPULSE password reset code is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`,
-    });
+  await transporter.sendMail({
+    from: `"TASKPULSE" <${EMAIL_USER}>`,
+    to: email,
+    subject: "Your TASKPULSE password reset code",
+    html: buildOtpEmailHtml(name, otp),
+    text: `Your TASKPULSE password reset code is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`,
+  });
 }
 
 const ROLE_DISPLAY = {
-    ADMINISTRATOR: "Admin",
-    PROJECT_MANAGER: "Manager",
-    COLLABORATOR: "Member",
+  ADMINISTRATOR: "Admin",
+  PROJECT_MANAGER: "Manager",
+  COLLABORATOR: "Member",
 };
 
 function buildInvitationEmailHtml({ workspaceName, inviterName, role, inviteLink }) {
-    const roleLabel = ROLE_DISPLAY[role] || role;
-    return `
+  const roleLabel = ROLE_DISPLAY[role] || role;
+  return `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -136,7 +131,7 @@ function buildInvitationEmailHtml({ workspaceName, inviterName, role, inviteLink
 }
 
 function buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl, expiresInHours = 24 }) {
-    return `
+  return `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -182,40 +177,40 @@ function buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl, expi
 }
 
 async function sendWelcomeUserEmail({ to, name, emailAddress, tempPassword, expiresInHours = 24 }) {
-    if (!transporter) {
-        throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
-    }
+  if (!transporter) {
+    throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
+  }
 
-    const loginUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/login`;
+  const loginUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/login`;
 
-    await transporter.sendMail({
-        from: `"TASKPULSE" <${EMAIL_USER}>`,
-        to,
-        subject: "Your TASKPULSE account has been created",
-        html: buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl, expiresInHours }),
-        text: `Your TASKPULSE account was created. Username: ${emailAddress}. Temporary password: ${tempPassword} (valid ${expiresInHours} hours). Sign in at ${loginUrl}, set a new password, then accept or reject the workspace invitation in notifications.`,
-    });
+  await transporter.sendMail({
+    from: `"TASKPULSE" <${EMAIL_USER}>`,
+    to,
+    subject: "Your TASKPULSE account has been created",
+    html: buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl, expiresInHours }),
+    text: `Your TASKPULSE account was created. Username: ${emailAddress}. Temporary password: ${tempPassword} (valid ${expiresInHours} hours). Sign in at ${loginUrl}, set a new password, then accept or reject the workspace invitation in notifications.`,
+  });
 }
 
 async function sendWorkspaceInvitation({ to, workspaceName, inviterName, role, inviteLink }) {
-    if (!transporter) {
-        throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
-    }
+  if (!transporter) {
+    throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
+  }
 
-    const roleLabel = ROLE_DISPLAY[role] || role;
+  const roleLabel = ROLE_DISPLAY[role] || role;
 
-    await transporter.sendMail({
-        from: `"TASKPULSE" <${EMAIL_USER}>`,
-        to,
-        subject: `You're invited to join "${workspaceName}" on TASKPULSE`,
-        html: buildInvitationEmailHtml({ workspaceName, inviterName, role, inviteLink }),
-        text: `${inviterName} invited you to join ${workspaceName} as ${roleLabel}. Accept here: ${inviteLink} (expires in 7 days)`,
-    });
+  await transporter.sendMail({
+    from: `"TASKPULSE" <${EMAIL_USER}>`,
+    to,
+    subject: `You're invited to join "${workspaceName}" on TASKPULSE`,
+    html: buildInvitationEmailHtml({ workspaceName, inviterName, role, inviteLink }),
+    text: `${inviterName} invited you to join ${workspaceName} as ${roleLabel}. Accept here: ${inviteLink} (expires in 7 days)`,
+  });
 }
 
 module.exports = {
-    sendPasswordResetOtp,
-    sendWelcomeUserEmail,
-    sendWorkspaceInvitation,
-    OTP_EXPIRY_MINUTES,
+  sendPasswordResetOtp,
+  sendWelcomeUserEmail,
+  sendWorkspaceInvitation,
+  OTP_EXPIRY_MINUTES,
 };

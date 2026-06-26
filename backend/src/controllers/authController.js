@@ -48,48 +48,11 @@ const USER_SELECT = {
 };
 
 const registerUser = async (req, res) => {
-    try {
-        const { name, email, password } = req.body;
-
-        const sanitizedName = name ? name.replace(/<[^>]*>/g, "").trim() : "";
-
-        if (!sanitizedName) {
-        return errorResponse(res, "Name is required", 400);
-        }
-
-        const existingUser = await prisma.user.findUnique({
-            where: { email },
-        });
-
-        if (existingUser) {
-            return errorResponse(res, "User already exists", 400);
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const user = await prisma.user.create({
-            data: {
-                name: sanitizedName,
-                email,
-                password: hashedPassword,
-            },
-            select: USER_SELECT,
-        });
-
-        return successResponse(
-            res,
-            "User registered successfully",
-            user,
-            201
-        );
-    } catch (error) {
-        console.error("REGISTER ERROR:", error);
-        return res.status(500).json({
-            success: false,
-            error: error.message,
-            stack: error.stack
-        });
-    }
+    return errorResponse(
+        res,
+        "Registration is disabled. Accounts can only be created by an Administrator.",
+        403
+    );
 };
 
 const loginUser = async (req, res) => {

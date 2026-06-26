@@ -51,7 +51,7 @@ function App() {
         <Routes>
           <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/register" element={<Navigate to="/login" replace />} />
           <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
           <Route path="/verify-otp" element={<PublicRoute><VerifyOtp /></PublicRoute>} />
           <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
