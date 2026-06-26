@@ -110,9 +110,9 @@ function WorkspaceDetail() {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <StatCard label="Projects" value={projects.length} icon={FolderKanban} />
-            <StatCard label="Team members" value={members.length} icon={Users} />
-            <StatCard label="Workspace" value="Active" icon={Layers} />
+            <StatCard title="Project" value={projects.length} icon={FolderKanban} />
+            <StatCard title="Members" value={members.length} icon={Users} />
+            <StatCard title="Status" value="Active" icon={Layers} />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-6">

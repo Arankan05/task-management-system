@@ -1,4 +1,5 @@
 const projectMemberService = require("../services/projectMemberService");
+const projectInvitationService = require("../services/projectInvitationService");
 const {
   canAccessProject,
   assertCanManageProject,
@@ -29,8 +30,19 @@ const addMember = async (req, res) => {
       return errorResponse(res, permission.message, permission.project ? 403 : 404);
     }
 
-    const { userId, role } = req.body;
-    if (!userId) return errorResponse(res, "User ID is required", 400);
+    const { userId, name, email, role } = req.body;
+
+    if (email) {
+      const result = await projectInvitationService.inviteCollaboratorByEmail(
+        projectId,
+        { name, email, role },
+        req.user.id,
+        req.app.get("io")
+      );
+      return successResponse(res, result.message, result, 201);
+    }
+
+    if (!userId) return errorResponse(res, "Email is required", 400);
 
     const member = await projectMemberService.addProjectMember(projectId, userId, role);
     return successResponse(res, "Member added to project", member, 201);
@@ -74,9 +86,48 @@ const getMyProjectRole = async (req, res) => {
   }
 };
 
+const listInvitations = async (req, res) => {
+  try {
+    const { id: projectId } = req.params;
+    const permission = await assertCanManageProject(req.user.id, projectId);
+    if (!permission.ok) {
+      return errorResponse(res, permission.message, permission.project ? 403 : 404);
+    }
+
+    const invitations = await projectInvitationService.listProjectInvitations(projectId);
+    return successResponse(res, "Project invitations fetched", invitations);
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, "Failed to fetch invitations", 500);
+  }
+};
+
+const resendInvitation = async (req, res) => {
+  try {
+    const { id: projectId, invitationId } = req.params;
+    const permission = await assertCanManageProject(req.user.id, projectId);
+    if (!permission.ok) {
+      return errorResponse(res, permission.message, permission.project ? 403 : 404);
+    }
+
+    const invitation = await projectInvitationService.resendProjectInvitation(
+      projectId,
+      invitationId,
+      req.user.id,
+      req.app.get("io")
+    );
+    return successResponse(res, "Invitation resent with a new temporary password", invitation);
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, error.message || "Failed to resend invitation", error.status || 500);
+  }
+};
+
 module.exports = {
   listMembers,
   addMember,
   removeMember,
   getMyProjectRole,
+  listInvitations,
+  resendInvitation,
 };

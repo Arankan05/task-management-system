@@ -36,7 +36,17 @@ export const getProjectMembers = async (projectId) => {
 
 export const addProjectMember = async (projectId, payload) => {
   const { data } = await api.post(`/projects/${projectId}/members`, payload)
+  return data
+}
+
+export const getProjectInvitations = async (projectId) => {
+  const { data } = await api.get(`/projects/${projectId}/invitations`)
   return data.data
+}
+
+export const resendProjectInvitation = async (projectId, invitationId) => {
+  const { data } = await api.post(`/projects/${projectId}/invitations/${invitationId}/resend`)
+  return data
 }
 
 export const removeProjectMember = async (projectId, userId) => {

@@ -1,11 +1,17 @@
 const prisma = require("../config/db");
 const { errorResponse } = require("../utils/response");
+const { needsPasswordChange } = require("../utils/userAccountHelper");
 
 const ensurePasswordChanged = async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { isActive: true, mustResetPassword: true },
+      select: {
+        isActive: true,
+        mustResetPassword: true,
+        isTemporaryPassword: true,
+        accountStatus: true,
+      },
     });
 
     if (!user) {
@@ -16,7 +22,7 @@ const ensurePasswordChanged = async (req, res, next) => {
       return errorResponse(res, "Account deactivated", 403, "Your account has been deactivated by an administrator");
     }
 
-    if (user.mustResetPassword) {
+    if (needsPasswordChange(user)) {
       return errorResponse(
         res,
         "Password reset required",
