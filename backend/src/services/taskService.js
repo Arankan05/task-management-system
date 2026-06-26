@@ -41,8 +41,35 @@ const getSortOrder = (sort) => {
   }
 };
 
-const createTask = async (data) =>
-  prisma.task.create({
+const ensureWorkspaceMember = async (workspaceId, userId) => {
+  if (!workspaceId || !userId) return;
+  const existing = await prisma.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId } },
+  });
+  if (!existing) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user) {
+      await prisma.workspaceMember.create({
+        data: {
+          workspaceId,
+          userId,
+          role: user.role === "ADMINISTRATOR" ? "COLLABORATOR" : user.role,
+        },
+      });
+    }
+  }
+};
+
+const createTask = async (data) => {
+  const project = await prisma.project.findUnique({
+    where: { id: data.projectId },
+    select: { workspaceId: true },
+  });
+  if (data.assignedToId && project) {
+    await ensureWorkspaceMember(project.workspaceId, data.assignedToId);
+  }
+
+  return prisma.task.create({
     data: {
       title: data.title.trim(),
       description: data.description?.trim() || null,
@@ -56,6 +83,7 @@ const createTask = async (data) =>
     },
     include: taskInclude,
   });
+};
 
 const getTasksByProject = async (projectId, filters = {}) =>
   prisma.task.findMany({
@@ -90,6 +118,16 @@ const updateTask = async (taskId, data) => {
   if (data.progress !== undefined) updateData.progress = Math.min(100, Math.max(0, data.progress));
   if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
   if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId || null;
+
+  if (data.assignedToId) {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { project: { select: { workspaceId: true } } },
+    });
+    if (task?.project) {
+      await ensureWorkspaceMember(task.project.workspaceId, data.assignedToId);
+    }
+  }
 
   return prisma.task.update({
     where: { id: taskId },
