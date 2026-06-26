@@ -3,8 +3,17 @@ const nodemailer = require("nodemailer");
 const EMAIL_USER = (process.env.EMAIL_USER || "").trim();
 const EMAIL_PASS = (process.env.EMAIL_PASS || "").trim();
 
+const isPlaceholder = (user, pass) => {
+  return (
+    !user ||
+    !pass ||
+    user.includes("your-gmail") ||
+    pass.includes("your-16-char")
+  );
+};
+
 const transporter =
-  EMAIL_USER && EMAIL_PASS
+  EMAIL_USER && EMAIL_PASS && !isPlaceholder(EMAIL_USER, EMAIL_PASS)
     ? nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -62,17 +71,24 @@ function buildOtpEmailHtml(name, otp) {
 
 /** [FORGOT PASSWORD] Sends the 6-digit OTP to the user's inbox (requires EMAIL_USER / EMAIL_PASS). */
 async function sendPasswordResetOtp(email, name, otp) {
+  console.log(`\n==================================================\n[EMAIL BYPASS] Password Reset OTP for ${email}:\nCode: ${otp}\n==================================================\n`);
   if (!transporter) {
-    throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
+    console.warn("⚠️ Email service is not configured. Reset code printed above.");
+    return false;
   }
-
-  await transporter.sendMail({
-    from: `"TASKPULSE" <${EMAIL_USER}>`,
-    to: email,
-    subject: "Your TASKPULSE password reset code",
-    html: buildOtpEmailHtml(name, otp),
-    text: `Your TASKPULSE password reset code is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`,
-  });
+  try {
+    await transporter.sendMail({
+      from: `"TASKPULSE" <${EMAIL_USER}>`,
+      to: email,
+      subject: "Your TASKPULSE password reset code",
+      html: buildOtpEmailHtml(name, otp),
+      text: `Your TASKPULSE password reset code is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`,
+    });
+    return true;
+  } catch (err) {
+    console.error(`❌ Failed to send password reset email to ${email}:`, err.message);
+    return false;
+  }
 }
 
 const ROLE_DISPLAY = {
@@ -179,35 +195,47 @@ function buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl, expi
 }
 
 async function sendWelcomeUserEmail({ to, name, emailAddress, tempPassword, expiresInHours = 24 }) {
-  if (!transporter) {
-    throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
-  }
-
   const loginUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/login`;
-
-  await transporter.sendMail({
-    from: `"TASKPULSE" <${EMAIL_USER}>`,
-    to,
-    subject: "Your TASKPULSE account has been created",
-    html: buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl, expiresInHours }),
-    text: `Your TASKPULSE account was created. Username: ${emailAddress}. Temporary password: ${tempPassword} (valid ${expiresInHours} hours). Sign in at ${loginUrl}, set a new password, then accept or reject the workspace invitation in notifications.`,
-  });
+  console.log(`\n==================================================\n[EMAIL BYPASS] Welcome Email to ${to}:\nTemp Password: ${tempPassword}\nLogin URL: ${loginUrl}\n==================================================\n`);
+  if (!transporter) {
+    console.warn("⚠️ Email service is not configured. Account details printed above.");
+    return false;
+  }
+  try {
+    await transporter.sendMail({
+      from: `"TASKPULSE" <${EMAIL_USER}>`,
+      to,
+      subject: "Your TASKPULSE account has been created",
+      html: buildWelcomeUserHtml({ name, emailAddress, tempPassword, loginUrl, expiresInHours }),
+      text: `Your TASKPULSE account was created. Username: ${emailAddress}. Temporary password: ${tempPassword} (valid ${expiresInHours} hours). Sign in at ${loginUrl}, set a new password, then accept or reject the workspace invitation in notifications.`,
+    });
+    return true;
+  } catch (err) {
+    console.error(`❌ Failed to send welcome email to ${to}:`, err.message);
+    return false;
+  }
 }
 
 async function sendWorkspaceInvitation({ to, workspaceName, inviterName, role, inviteLink }) {
-  if (!transporter) {
-    throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
-  }
-
   const roleLabel = ROLE_DISPLAY[role] || role;
-
-  await transporter.sendMail({
-    from: `"TASKPULSE" <${EMAIL_USER}>`,
-    to,
-    subject: `You're invited to join "${workspaceName}" on TASKPULSE`,
-    html: buildInvitationEmailHtml({ workspaceName, inviterName, role, inviteLink }),
-    text: `${inviterName} invited you to join ${workspaceName} as ${roleLabel}. Accept here: ${inviteLink} (expires in 7 days)`,
-  });
+  console.log(`\n==================================================\n[EMAIL BYPASS] Workspace Invitation to ${to}:\nWorkspace: ${workspaceName}\nRole: ${roleLabel}\nInvite Link: ${inviteLink}\n==================================================\n`);
+  if (!transporter) {
+    console.warn("⚠️ Email service is not configured. Invitation link printed above.");
+    return false;
+  }
+  try {
+    await transporter.sendMail({
+      from: `"TASKPULSE" <${EMAIL_USER}>`,
+      to,
+      subject: `You're invited to join "${workspaceName}" on TASKPULSE`,
+      html: buildInvitationEmailHtml({ workspaceName, inviterName, role, inviteLink }),
+      text: `${inviterName} invited you to join ${workspaceName} as ${roleLabel}. Accept here: ${inviteLink} (expires in 7 days)`,
+    });
+    return true;
+  } catch (err) {
+    console.error(`❌ Failed to send invitation email to ${to}:`, err.message);
+    return false;
+  }
 }
 
 module.exports = {
