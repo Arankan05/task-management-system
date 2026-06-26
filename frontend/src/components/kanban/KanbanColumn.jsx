@@ -4,8 +4,10 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import KanbanCard from './KanbanCard'
 
 const columnStyles = {
-  TODO: 'border-t-slate-500/60 bg-slate-500/5',
+  BACKLOG: 'border-t-slate-500/60 bg-slate-500/5',
+  TODO: 'border-t-blue-500/60 bg-blue-500/5',
   IN_PROGRESS: 'border-t-amber-500/60 bg-amber-500/5',
+  REVIEW: 'border-t-purple-500/60 bg-purple-500/5',
   DONE: 'border-t-emerald-500/60 bg-emerald-500/5',
 }
 

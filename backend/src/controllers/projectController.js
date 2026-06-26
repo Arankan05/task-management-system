@@ -2,7 +2,9 @@ const projectService = require("../services/projectService");
 const {
   isWorkspaceMember,
   canAccessProject,
+  assertCanManageProject,
   assertCanManageTasks,
+  getAccessibleProjectIds,
 } = require("../services/accessService");
 const { successResponse, errorResponse } = require("../utils/response");
 
@@ -13,7 +15,12 @@ const listProjects = async (req, res) => {
       return errorResponse(res, "Access denied", 403);
     }
     const { search, sort } = req.query;
-    const projects = await projectService.getProjectsByWorkspace(workspaceId, { search, sort });
+    const accessibleIds = await getAccessibleProjectIds(req.user.id, workspaceId);
+    const projects = await projectService.getProjectsByWorkspace(workspaceId, {
+      search,
+      sort,
+      accessibleIds,
+    });
     return successResponse(res, "Projects fetched", projects);
   } catch (error) {
     console.error(error);
@@ -62,7 +69,7 @@ const updateProject = async (req, res) => {
     if (!project) return errorResponse(res, "Project not found", 404);
     if (!allowed) return errorResponse(res, "Access denied", 403);
 
-    const permission = await assertCanManageTasks(req.user.id, project.workspaceId);
+    const permission = await assertCanManageProject(req.user.id, req.params.id);
     if (!permission.ok) return errorResponse(res, permission.message, 403);
 
     const updated = await projectService.updateProject(req.params.id, req.body);
@@ -75,12 +82,10 @@ const updateProject = async (req, res) => {
 
 const deleteProject = async (req, res) => {
   try {
-    const { allowed, project } = await canAccessProject(req.user.id, req.params.id);
-    if (!project) return errorResponse(res, "Project not found", 404);
-    if (!allowed) return errorResponse(res, "Access denied", 403);
-
-    const permission = await assertCanManageTasks(req.user.id, project.workspaceId);
-    if (!permission.ok) return errorResponse(res, permission.message, 403);
+    const permission = await assertCanManageProject(req.user.id, req.params.id);
+    if (!permission.ok) {
+      return errorResponse(res, permission.message, permission.project ? 403 : 404);
+    }
 
     await projectService.deleteProject(req.params.id);
     return successResponse(res, "Project deleted");

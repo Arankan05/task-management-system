@@ -21,12 +21,19 @@ function ProjectTaskDetail() {
   const [commentLoading, setCommentLoading] = useState(false)
   const [localError, setLocalError] = useState('')
 
-  const base = `/workspaces/${workspaceId}/projects/${projectId}`
-
   useEffect(() => {
     dispatch(fetchTaskById(taskId))
     return () => dispatch(clearSelectedTask())
   }, [dispatch, taskId])
+
+  useEffect(() => {
+    if (!projectId && task?.projectId && workspaceId) {
+      navigate(`/workspaces/${workspaceId}/projects/${task.projectId}/tasks/${taskId}`, { replace: true })
+    }
+  }, [projectId, task, workspaceId, taskId, navigate])
+
+  const resolvedProjectId = projectId || task?.projectId
+  const base = `/workspaces/${workspaceId}/projects/${resolvedProjectId}`
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this task?')) return
