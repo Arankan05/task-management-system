@@ -4,7 +4,9 @@ const DEV_LOCALHOST_ORIGIN = /^http:\/\/localhost:\d+$/;
 
 function isAllowedOrigin(origin) {
   if (!origin) return true;
-  if (origin === CLIENT_URL) return true;
+  
+  const clientUrls = CLIENT_URL.split(',').map(url => url.trim());
+  if (clientUrls.includes(origin)) return true;
   if (process.env.NODE_ENV !== "production" && DEV_LOCALHOST_ORIGIN.test(origin)) {
     return true;
   }
