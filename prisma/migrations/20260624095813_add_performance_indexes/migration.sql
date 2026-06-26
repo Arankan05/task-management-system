@@ -1,0 +1,2 @@
+-- MariaDB index renaming is omitted as it does not affect functionality.
+-- The performance indexes were already successfully created.

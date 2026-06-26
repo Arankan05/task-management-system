@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { Clock, RefreshCw, Users, X } from 'lucide-react'
 import {
   getWorkspaceJoinRequests,
@@ -28,7 +28,7 @@ function PendingUsersList({ workspaceId, refreshKey, onRefresh, onError, onSucce
   const [loading, setLoading] = useState(true)
   const [actionId, setActionId] = useState(null)
 
-  const load = useCallback(async () => {
+  const load = async () => {
     setLoading(true)
     try {
       const list = await getWorkspaceJoinRequests(workspaceId)
@@ -38,11 +38,11 @@ function PendingUsersList({ workspaceId, refreshKey, onRefresh, onError, onSucce
     } finally {
       setLoading(false)
     }
-  }, [workspaceId, onError])
+  }
 
   useEffect(() => {
     load()
-  }, [load, refreshKey])
+  }, [workspaceId, refreshKey])
 
   if (loading) {
     return (

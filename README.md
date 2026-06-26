@@ -15,6 +15,7 @@ task-management-system/
 ├── frontend/            # React + Vite + Redux
 │   └── src/
 ├── e2e-tests/           # Playwright end-to-end tests
+├── docker-compose.yml   # Docker setup (optional)
 └── package.json         # Root scripts (orchestration)
 ```
 
@@ -80,6 +81,12 @@ VITE_SOCKET_URL=https://your-api.example.com
 
 Copy from `frontend/.env.example` and adjust URLs for your host.
 
+## Docker (optional)
+
+```bash
+docker compose up --build
+```
+
 ## Testing
 
 ```bash
@@ -99,6 +106,7 @@ npx playwright test
 With backend and frontend running, verify:
 
 - [ ] Register / login / logout
+- [ ] Forgot password / OTP reset flow
 - [ ] Create workspace, add member
 - [ ] Create / edit / delete task
 - [ ] Kanban drag-and-drop status change

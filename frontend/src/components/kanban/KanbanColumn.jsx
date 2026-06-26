@@ -4,9 +4,9 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import KanbanCard from './KanbanCard'
 
 const columnStyles = {
-  TODO: 'border-t-slate-400 bg-slate-50/50',
-  IN_PROGRESS: 'border-t-amber-400 bg-amber-50/30',
-  DONE: 'border-t-emerald-400 bg-emerald-50/30',
+  TODO: 'border-t-slate-500/60 bg-slate-500/5',
+  IN_PROGRESS: 'border-t-amber-500/60 bg-amber-500/5',
+  DONE: 'border-t-emerald-500/60 bg-emerald-500/5',
 }
 
 function KanbanColumn({ column, tasks, canDragTask }) {
@@ -15,12 +15,12 @@ function KanbanColumn({ column, tasks, canDragTask }) {
 
   return (
     <div
-      className={`flex flex-col rounded-2xl border border-surface-border border-t-4 ${columnStyles[column.id]} min-h-[400px] transition-colors ${isOver ? 'ring-2 ring-brand-500/30' : ''}`}
+      className={`flex flex-col rounded-2xl border border-white/5 border-t-4 backdrop-blur-sm ${columnStyles[column.id]} min-h-[400px] transition-all duration-200 ${isOver ? 'ring-2 ring-primary/45 bg-primary/10' : ''}`}
     >
-      <div className="px-4 py-3 border-b border-surface-border/60">
+      <div className="px-4 py-3 border-b border-white/5">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-800">{column.title}</h3>
-          <span className="text-xs font-semibold text-slate-400 bg-white px-2 py-0.5 rounded-full">
+          <h3 className="text-sm font-bold text-theme">{column.title}</h3>
+          <span className="text-xs font-semibold text-theme-muted bg-theme-surface/50 border border-white/5 px-2 py-0.5 rounded-full">
             {tasks.length}
           </span>
         </div>
@@ -33,7 +33,7 @@ function KanbanColumn({ column, tasks, canDragTask }) {
           ))}
         </SortableContext>
         {tasks.length === 0 && (
-          <p className="text-xs text-slate-400 text-center py-8">Drop tasks here</p>
+          <p className="text-xs text-theme-muted text-center py-8">Drop tasks here</p>
         )}
       </div>
     </div>

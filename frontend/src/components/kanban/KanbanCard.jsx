@@ -23,25 +23,25 @@ function KanbanCard({ task, draggable = true }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`glass-card p-3 transition-shadow duration-150 ${
+      className={`glass-card p-3 transition-all duration-300 ${
         draggable
-          ? `cursor-grab active:cursor-grabbing ${isDragging ? 'shadow-elevated ring-2 ring-primary/20' : 'hover:shadow-elevated hover:-translate-y-0.5'}`
+          ? `cursor-grab active:cursor-grabbing ${isDragging ? 'shadow-2xl ring-2 ring-primary/30 border-primary/40 opacity-70 scale-102' : ''}`
           : 'cursor-default'
       }`}
       {...attributes}
       {...(draggable ? listeners : {})}
     >
       <div className="flex items-start gap-2 mb-2">
-        <GripVertical size={14} className="text-slate-300 mt-0.5 shrink-0" />
-        <p className="text-sm font-semibold text-slate-800 leading-snug">{task.title}</p>
+        <GripVertical size={14} className="text-theme-muted/40 mt-0.5 shrink-0" />
+        <p className="text-sm font-semibold text-theme leading-snug">{task.title}</p>
       </div>
       {task.description && (
-        <p className="text-xs text-slate-500 line-clamp-2 mb-2 ml-5">{task.description}</p>
+        <p className="text-xs text-theme-muted line-clamp-2 mb-2 ml-5">{task.description}</p>
       )}
       <div className="flex flex-wrap gap-1.5 ml-5 mb-2">
         <Badge label={formatPriority(task.priority)} variant={task.priority} />
       </div>
-      <div className="flex items-center gap-3 ml-5 text-xs text-slate-400">
+      <div className="flex items-center gap-3 ml-5 text-xs text-theme-muted">
         {task.dueDate && (
           <span className="flex items-center gap-1">
             <Calendar size={11} />

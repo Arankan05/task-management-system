@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
 
@@ -17,7 +18,7 @@ function Modal({ isOpen, onClose, title, children, size = 'md' }) {
     xl: 'max-w-4xl',
   }
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -56,8 +57,9 @@ function Modal({ isOpen, onClose, title, children, size = 'md' }) {
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }
 
-export default Modal
+export default Modal;
