@@ -12,10 +12,13 @@ const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'))
 const MandatoryResetPassword = lazy(() => import('./pages/MandatoryResetPassword'))
 const Workspaces = lazy(() => import('./pages/Workspaces'))
 const WorkspaceDetail = lazy(() => import('./pages/WorkspaceDetail'))
-const WorkspaceKanban = lazy(() => import('./pages/WorkspaceKanban'))
-const WorkspaceTaskDetail = lazy(() => import('./pages/WorkspaceTaskDetail'))
-const WorkspaceSettings = lazy(() => import('./pages/WorkspaceSettings'))
 const ProjectDashboard = lazy(() => import('./pages/ProjectDashboard'))
+const ProjectKanban = lazy(() => import('./pages/ProjectKanban'))
+const ProjectTasks = lazy(() => import('./pages/ProjectTasks'))
+const ProjectTaskDetail = lazy(() => import('./pages/ProjectTaskDetail'))
+const ProjectTeam = lazy(() => import('./pages/ProjectTeam'))
+const ProjectAnalytics = lazy(() => import('./pages/ProjectAnalytics'))
+const ProjectSettings = lazy(() => import('./pages/ProjectSettings'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Settings = lazy(() => import('./pages/Settings'))
 const NotFound = lazy(() => import('./pages/NotFound'))
@@ -44,7 +47,7 @@ function PublicRoute({ children }) {
   return children
 }
 
-function LegacyProjectRedirect() {
+function LegacyWorkspaceRedirect() {
   const { workspaceId } = useParams()
   return <Navigate to={`/workspaces/${workspaceId}`} replace />
 }
@@ -71,11 +74,17 @@ function App() {
 
           <Route path="/workspaces" element={<ProtectedRoute><Workspaces /></ProtectedRoute>} />
           <Route path="/workspaces/:workspaceId" element={<ProtectedRoute><WorkspaceDetail /></ProtectedRoute>} />
-          <Route path="/workspaces/:workspaceId/kanban" element={<ProtectedRoute><WorkspaceKanban /></ProtectedRoute>} />
-          <Route path="/workspaces/:workspaceId/settings" element={<ProtectedRoute><WorkspaceSettings /></ProtectedRoute>} />
-          <Route path="/workspaces/:workspaceId/tasks/:taskId" element={<ProtectedRoute><WorkspaceTaskDetail /></ProtectedRoute>} />
+          <Route path="/workspaces/:workspaceId/kanban" element={<ProtectedRoute><LegacyWorkspaceRedirect /></ProtectedRoute>} />
+          <Route path="/workspaces/:workspaceId/settings" element={<ProtectedRoute><LegacyWorkspaceRedirect /></ProtectedRoute>} />
+          <Route path="/workspaces/:workspaceId/tasks/:taskId" element={<ProtectedRoute><ProjectTaskDetail /></ProtectedRoute>} />
+
           <Route path="/workspaces/:workspaceId/projects/:projectId" element={<ProtectedRoute><ProjectDashboard /></ProtectedRoute>} />
-          <Route path="/workspaces/:workspaceId/projects/:projectId/*" element={<ProtectedRoute><LegacyProjectRedirect /></ProtectedRoute>} />
+          <Route path="/workspaces/:workspaceId/projects/:projectId/kanban" element={<ProtectedRoute><ProjectKanban /></ProtectedRoute>} />
+          <Route path="/workspaces/:workspaceId/projects/:projectId/tasks" element={<ProtectedRoute><ProjectTasks /></ProtectedRoute>} />
+          <Route path="/workspaces/:workspaceId/projects/:projectId/tasks/:taskId" element={<ProtectedRoute><ProjectTaskDetail /></ProtectedRoute>} />
+          <Route path="/workspaces/:workspaceId/projects/:projectId/team" element={<ProtectedRoute><ProjectTeam /></ProtectedRoute>} />
+          <Route path="/workspaces/:workspaceId/projects/:projectId/analytics" element={<ProtectedRoute><ProjectAnalytics /></ProtectedRoute>} />
+          <Route path="/workspaces/:workspaceId/projects/:projectId/settings" element={<ProtectedRoute><ProjectSettings /></ProtectedRoute>} />
 
           <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
 

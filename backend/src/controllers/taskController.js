@@ -3,8 +3,7 @@ const {
   canAccessProject,
   canAccessTask,
   resolveTaskAccess,
-  assertCanManageTasks,
-  getWorkspaceRole,
+  assertCanManageProject,
   getTaskListFiltersForRole,
 } = require("../services/accessService");
 const { successResponse, errorResponse } = require("../utils/response");
@@ -56,7 +55,7 @@ const createTask = async (req, res) => {
     if (!project) return errorResponse(res, "Project not found", 404);
     if (!allowed) return errorResponse(res, "Access denied", 403);
 
-    const permission = await assertCanManageTasks(req.user.id, project.workspaceId);
+    const permission = await assertCanManageProject(req.user.id, projectId);
     if (!permission.ok) return errorResponse(res, permission.message, 403);
 
     const { title, description, status, priority, progress, dueDate, assignedToId } = req.body;
@@ -128,7 +127,7 @@ const updateTask = async (req, res) => {
 const updateTaskStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const valid = ["TODO", "IN_PROGRESS", "DONE"];
+    const valid = ["BACKLOG", "TODO", "IN_PROGRESS", "REVIEW", "DONE"];
     if (!valid.includes(status)) {
       return errorResponse(res, "Invalid status", 400);
     }
@@ -144,7 +143,9 @@ const updateTaskStatus = async (req, res) => {
         ? 100
         : status === "IN_PROGRESS"
           ? Math.max(access.task.progress, 25)
-          : access.task.progress;
+          : status === "REVIEW"
+            ? Math.max(access.task.progress, 75)
+            : access.task.progress;
     const updated = await taskService.updateTask(req.params.id, { status, progress });
 
     const io = req.app.get("io");
@@ -199,7 +200,7 @@ const createLabel = async (req, res) => {
     if (!project) return errorResponse(res, "Project not found", 404);
     if (!allowed) return errorResponse(res, "Access denied", 403);
 
-    const permission = await assertCanManageTasks(req.user.id, project.workspaceId);
+    const permission = await assertCanManageProject(req.user.id, projectId);
     if (!permission.ok) return errorResponse(res, permission.message, 403);
     if (!req.body.name?.trim()) return errorResponse(res, "Label name is required", 400);
 

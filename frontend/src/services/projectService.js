@@ -29,6 +29,25 @@ export const getProjectStats = async (projectId) => {
   return data.data
 }
 
+export const getProjectMembers = async (projectId) => {
+  const { data } = await api.get(`/projects/${projectId}/members`)
+  return data.data
+}
+
+export const addProjectMember = async (projectId, payload) => {
+  const { data } = await api.post(`/projects/${projectId}/members`, payload)
+  return data.data
+}
+
+export const removeProjectMember = async (projectId, userId) => {
+  await api.delete(`/projects/${projectId}/members/${userId}`)
+}
+
+export const getMyProjectRole = async (projectId) => {
+  const { data } = await api.get(`/projects/${projectId}/my-role`)
+  return data.data
+}
+
 export const getLabels = async (projectId) => {
   const { data } = await api.get(`/projects/${projectId}/labels`)
   return data.data

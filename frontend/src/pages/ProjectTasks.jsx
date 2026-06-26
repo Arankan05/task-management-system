@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useParams } from 'react-router-dom'
-import { Plus, ArrowLeft, Search, SortAsc } from 'lucide-react'
+import { Plus, Search, ListTodo } from 'lucide-react'
 import Layout from '../components/Layout'
+import PageHeader from '../components/ui/PageHeader'
+import ProjectTabs from '../components/project/ProjectTabs'
 import TaskCard from '../components/tasks/TaskCard'
 import TaskFormModal from '../components/tasks/TaskFormModal'
 import Loader from '../components/ui/Loader'
 import Alert from '../components/ui/Alert'
 import { fetchTasks, setActiveProjectId } from '../store/slices/tasksSlice'
 import { fetchLabels } from '../store/slices/projectsSlice'
+import { getMyProjectRole, getProject } from '../services/projectService'
+import { canCreateTask } from '../utils/permissions'
 import { TASK_STATUSES, TASK_PRIORITIES, STATUS_LABELS, PRIORITY_LABELS } from '../utils/constants'
 
 function ProjectTasks() {
@@ -20,13 +24,18 @@ function ProjectTasks() {
   const [status, setStatus] = useState('')
   const [priority, setPriority] = useState('')
   const [sort, setSort] = useState('recent')
+  const [projectRole, setProjectRole] = useState(null)
+  const [project, setProject] = useState(null)
 
   const base = `/workspaces/${workspaceId}/projects/${projectId}`
+  const canCreate = projectRole ? canCreateTask(projectRole.role) : false
 
   useEffect(() => {
     dispatch(setActiveProjectId(projectId))
     dispatch(fetchLabels(projectId))
     dispatch(fetchTasks({ projectId, search, status, priority, sort }))
+    getMyProjectRole(projectId).then(setProjectRole).catch(() => {})
+    getProject(projectId).then(setProject).catch(() => {})
   }, [dispatch, projectId, search, status, priority, sort])
 
   const filtered = useMemo(() => tasks, [tasks])
@@ -34,17 +43,27 @@ function ProjectTasks() {
   return (
     <Layout>
       <div className="page-container">
-        <Link to={base} className="inline-flex items-center gap-1 text-sm text-primary hover:underline mb-4">
-          <ArrowLeft size={14} /> Project dashboard
-        </Link>
+        <PageHeader
+          breadcrumb={[
+            { label: 'Workspaces', to: '/workspaces' },
+            { label: 'Workspace', to: `/workspaces/${workspaceId}` },
+            { label: project?.name || 'Project', to: base },
+            { label: 'Tasks' },
+          ]}
+          icon={<ListTodo size={24} />}
+          iconColor="#7C3AED"
+          title="Tasks"
+          subtitle="View and manage all project tasks"
+          actions={
+            canCreate ? (
+              <button type="button" onClick={() => setModalOpen(true)} className="btn-primary">
+                <Plus size={16} /> New Task
+              </button>
+            ) : null
+          }
+        />
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-bold text-theme">Tasks</h1>
-          <div className="flex gap-2">
-            <Link to={`${base}/kanban`} className="btn-secondary">Kanban view</Link>
-            <button onClick={() => setModalOpen(true)} className="btn-primary"><Plus size={16} /> New Task</button>
-          </div>
-        </div>
+        <ProjectTabs activeTab="tasks" />
 
         {error && <div className="mb-4"><Alert message={error} type="error" /></div>}
 

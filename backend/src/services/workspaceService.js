@@ -1,5 +1,5 @@
 const prisma = require("../config/db");
-const projectService = require("./projectService");
+const { seedProjectMembersFromWorkspace, syncWorkspaceMemberToProjects } = require("./projectMemberService");
 const joinRequestService = require("./joinRequestService");
 const { notifyAdminUpdate } = require("./notificationService");
 const { WORKSPACE_ROLES, VALID_ROLES, ROLE_LABELS } = require("../utils/workspaceRoles");
@@ -28,7 +28,7 @@ const createWorkspace = async (userId, data) => {
       data: { workspaceId: workspace.id, userId, role: WORKSPACE_ROLES.ADMINISTRATOR },
     });
 
-    await tx.project.create({
+    const defaultProject = await tx.project.create({
       data: {
         name: DEFAULT_PROJECT_NAME,
         description: "Workspace task board",
@@ -36,6 +36,8 @@ const createWorkspace = async (userId, data) => {
         createdById: userId,
       },
     });
+
+    await seedProjectMembersFromWorkspace(defaultProject.id, workspace.id, userId);
 
     return tx.workspace.findUnique({
       where: { id: workspace.id },
@@ -127,6 +129,8 @@ const addMember = async (workspaceId, { email, role = WORKSPACE_ROLES.COLLABORAT
       data: { workspaceId, userId: user.id, role },
       include: { user: { select: memberUserSelect } },
     });
+
+    await syncWorkspaceMemberToProjects(workspaceId, user.id, role);
 
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
