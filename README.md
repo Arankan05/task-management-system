@@ -18,6 +18,10 @@ task-management-system/
 ├── docker-compose.yml   # Docker setup (optional)
 └── package.json         # Root scripts (orchestration)
 ```
+##ER Diagram
+
+<img width="6993" height="8192" alt="mermaid-ai-diagram-2026-06-26-195431" src="https://github.com/user-attachments/assets/73472299-9772-48d9-9d3c-c9bae36c0ab9" />
+
 
 ## Setup
 
@@ -95,6 +99,11 @@ cd e2e-tests
 npm install
 npx playwright test
 ```
+
+##Deploy Diagram
+
+<img width="707" height="808" alt="image" src="https://github.com/user-attachments/assets/fab3ca3d-37db-4fb7-b5ea-f1c60b1022f4" />
+
 
 ## API
 
