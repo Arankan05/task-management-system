@@ -149,7 +149,7 @@ const refreshAccessToken = async (req, res) => {
 
         const record = await verifyRefreshToken(refreshToken);
 
-        if (!record?.user) {
+        if (!record?.user || !record.user.isActive) {
             clearAuthCookies(res);
             return errorResponse(res, "Invalid or expired refresh token", 401);
         }
