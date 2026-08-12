@@ -25,7 +25,7 @@ export const activateWorkspaceUser = async (workspaceId, userId) => {
   return data.data
 }
 
-export const forceResetPassword = async (newPassword, confirmPassword) => {
-  const { data } = await api.post('/auth/force-reset-password', { newPassword, confirmPassword })
+export const forceResetPassword = async (currentPassword, newPassword, confirmPassword) => {
+  const { data } = await api.post('/auth/force-reset-password', { currentPassword, newPassword, confirmPassword })
   return data.data
 }
