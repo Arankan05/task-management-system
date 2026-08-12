@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useSelector } from 'react-redux'
-import { UserPlus, Trash2 } from 'lucide-react'
+import { UserPlus, Trash2, Mail, RefreshCw } from 'lucide-react'
 import Layout from '../components/Layout'
 import PageHeader from '../components/ui/PageHeader'
 import ProjectTabs from '../components/project/ProjectTabs'
@@ -15,8 +15,9 @@ import {
   addProjectMember,
   removeProjectMember,
   getMyProjectRole,
+  getProjectInvitations,
+  resendProjectInvitation,
 } from '../services/projectService'
-import { getWorkspaceMembers } from '../services/workspaceService'
 import { PROJECT_MEMBER_ROLE_OPTIONS, PROJECT_ROLE_LABELS } from '../utils/constants'
 
 function ProjectTeam() {
@@ -24,28 +25,36 @@ function ProjectTeam() {
   const { user } = useSelector((s) => s.auth)
   const [project, setProject] = useState(null)
   const [members, setMembers] = useState([])
-  const [workspaceMembers, setWorkspaceMembers] = useState([])
+  const [invitations, setInvitations] = useState([])
   const [myRole, setMyRole] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState({ userId: '', role: 'COLLABORATOR' })
+  const [submitting, setSubmitting] = useState(false)
+  const [resendingId, setResendingId] = useState(null)
+  const [form, setForm] = useState({ name: '', email: '', role: 'COLLABORATOR' })
 
   const canManage = myRole?.canManageMembers
 
   const load = async () => {
     setLoading(true)
     try {
-      const [proj, projectMembers, wsMembers, role] = await Promise.all([
+      const [proj, projectMembers, role] = await Promise.all([
         getProject(projectId),
         getProjectMembers(projectId),
-        getWorkspaceMembers(workspaceId),
         getMyProjectRole(projectId),
       ])
       setProject(proj)
       setMembers(projectMembers)
-      setWorkspaceMembers(wsMembers)
       setMyRole(role)
+
+      if (role?.canManageMembers) {
+        const pending = await getProjectInvitations(projectId)
+        setInvitations(pending)
+      } else {
+        setInvitations([])
+      }
     } catch {
       setError('Failed to load project team')
     } finally {
@@ -57,15 +66,36 @@ function ProjectTeam() {
     load()
   }, [projectId, workspaceId])
 
-  const handleAdd = async (e) => {
+  const handleInvite = async (e) => {
     e.preventDefault()
+    setSubmitting(true)
+    setError('')
+    setSuccess('')
     try {
-      await addProjectMember(projectId, form)
+      const result = await addProjectMember(projectId, form)
+      setSuccess(result?.message || 'Collaborator invited successfully')
       setModalOpen(false)
-      setForm({ userId: '', role: 'COLLABORATOR' })
+      setForm({ name: '', email: '', role: 'COLLABORATOR' })
       load()
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add member')
+      setError(err.response?.data?.message || 'Failed to invite collaborator')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleResend = async (invitationId) => {
+    setResendingId(invitationId)
+    setError('')
+    setSuccess('')
+    try {
+      await resendProjectInvitation(projectId, invitationId)
+      setSuccess('Invitation resent with a new temporary password')
+      load()
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to resend invitation')
+    } finally {
+      setResendingId(null)
     }
   }
 
@@ -78,10 +108,6 @@ function ProjectTeam() {
       setError(err.response?.data?.message || 'Failed to remove member')
     }
   }
-
-  const availableToAdd = workspaceMembers.filter(
-    (wm) => !members.some((m) => m.userId === wm.userId)
-  )
 
   if (loading) {
     return <Layout><div className="flex justify-center py-20"><Loader /></div></Layout>
@@ -98,7 +124,7 @@ function ProjectTeam() {
             { label: 'Team' },
           ]}
           title="Project Team"
-          subtitle="Members who can access this project"
+          subtitle="Invite collaborators by name and email"
           actions={
             canManage ? (
               <button type="button" onClick={() => setModalOpen(true)} className="btn-primary">
@@ -111,6 +137,40 @@ function ProjectTeam() {
         <ProjectTabs activeTab="team" />
 
         {error && <div className="mb-4"><Alert message={error} type="error" onClose={() => setError('')} /></div>}
+        {success && <div className="mb-4"><Alert message={success} type="success" onClose={() => setSuccess('')} /></div>}
+
+        {canManage && invitations.length > 0 && (
+          <div className="glass-card mb-6 divide-y divide-white/5">
+            <div className="px-6 py-3 border-b border-white/5">
+              <h3 className="text-sm font-semibold text-theme">Pending invitations</h3>
+              <p className="text-xs text-theme-muted mt-0.5">New users must sign in and change their temporary password</p>
+            </div>
+            {invitations.map((inv) => (
+              <div key={inv.id} className="flex items-center justify-between px-6 py-4 gap-4">
+                <div className="min-w-0">
+                  <p className="font-medium text-theme truncate">{inv.user?.name || inv.email}</p>
+                  <p className="text-xs text-theme-muted flex items-center gap-1">
+                    <Mail size={12} /> {inv.email}
+                  </p>
+                  <p className="text-xs text-theme-muted mt-1">
+                    Status: <span className={inv.status === 'EXPIRED' ? 'text-rose-400' : 'text-amber-400'}>{inv.status}</span>
+                    {' · '}
+                    Expires: {new Date(inv.expiresAt).toLocaleString()}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleResend(inv.id)}
+                  disabled={resendingId === inv.id}
+                  className="btn-secondary shrink-0"
+                >
+                  <RefreshCw size={14} className={resendingId === inv.id ? 'animate-spin' : ''} />
+                  Resend
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="glass-card divide-y divide-white/5">
           {members.map((m) => (
@@ -140,16 +200,31 @@ function ProjectTeam() {
         </div>
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add project member">
-        <form onSubmit={handleAdd} className="space-y-4">
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Add project member">
+        <form onSubmit={handleInvite} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-theme-muted mb-1">Workspace member</label>
-            <select className="input-field" value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value })} required>
-              <option value="">Select member</option>
-              {availableToAdd.map((wm) => (
-                <option key={wm.userId} value={wm.userId}>{wm.user?.name} ({wm.user?.email})</option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-theme-muted mb-1">Full name</label>
+            <input
+              className="input-field"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="Jane Doe"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-theme-muted mb-1">Email address</label>
+            <input
+              type="email"
+              className="input-field"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="collaborator@example.com"
+              required
+            />
+            <p className="text-xs text-theme-muted mt-1">
+              Existing users are added automatically. New users receive a temporary password by email.
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-theme-muted mb-1">Project role</label>
@@ -159,7 +234,9 @@ function ProjectTeam() {
               ))}
             </select>
           </div>
-          <button type="submit" className="btn-primary w-full">Add to project</button>
+          <button type="submit" disabled={submitting} className="btn-primary w-full">
+            {submitting ? 'Sending...' : 'Add to project'}
+          </button>
         </form>
       </Modal>
     </Layout>
