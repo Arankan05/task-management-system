@@ -130,17 +130,7 @@ function Login() {
               </button>
             </form>
 
-            <p className="text-center text-theme-muted text-sm mt-6">
-              Don't have an account?{' '}
-              <Link
-                to={redirectTo !== '/workspaces'
-                  ? `/register?email=${encodeURIComponent(email)}&redirect=${encodeURIComponent(redirectTo)}`
-                  : '/register'}
-                className="text-primary font-semibold hover:opacity-85"
-              >
-                Create one
-              </Link>
-            </p>
+
           </div>
         </div>
       </div>
