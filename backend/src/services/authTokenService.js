@@ -46,12 +46,13 @@ const verifyRefreshToken = async (raw) => {
           id: true,
           role: true,
           email: true,
+          isActive: true,
         },
       },
     },
   });
 
-  if (!record || record.expiresAt < new Date()) {
+  if (!record || record.expiresAt < new Date() || !record.user || !record.user.isActive) {
     if (record) {
       await prisma.refreshToken.delete({ where: { id: record.id } }).catch(() => {});
     }
