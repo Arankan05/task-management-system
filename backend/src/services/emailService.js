@@ -215,9 +215,163 @@ async function sendWorkspaceInvitation({ to, workspaceName, inviterName, role, i
     });
 }
 
+function buildProjectMemberAddedHtml({ name, projectName, workspaceName, inviterName, loginUrl }) {
+    return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#F8FAFC;font-family:Inter,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#7C3AED,#A855F7);padding:28px 32px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">TASKPULSE</h1>
+              <p style="margin:8px 0 0;color:#ede9fe;font-size:13px;">Project Invitation</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 8px;color:#1E293B;font-size:15px;">Hi ${name || "there"},</p>
+              <p style="margin:0 0 20px;color:#64748b;font-size:14px;line-height:1.6;">
+                <strong>${inviterName}</strong> added you to the project
+                <strong>${projectName}</strong> in workspace <strong>${workspaceName}</strong>.
+              </p>
+              <p style="margin:0 0 20px;color:#64748b;font-size:14px;line-height:1.6;">
+                Sign in with your existing TASKPULSE credentials to access the project.
+              </p>
+              <div style="text-align:center;margin:24px 0;">
+                <a href="${loginUrl}" style="display:inline-block;background:#7C3AED;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;font-size:15px;">
+                  Sign In to TASKPULSE
+                </a>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildProjectCollaboratorInviteHtml({
+    name,
+    emailAddress,
+    tempPassword,
+    projectName,
+    workspaceName,
+    inviterName,
+    loginUrl,
+    expiresInHours = 24,
+}) {
+    return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#F8FAFC;font-family:Inter,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#7C3AED,#A855F7);padding:28px 32px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">TASKPULSE</h1>
+              <p style="margin:8px 0 0;color:#ede9fe;font-size:13px;">Project Collaborator Invitation</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 8px;color:#1E293B;font-size:15px;">Hi ${name || "there"},</p>
+              <p style="margin:0 0 20px;color:#64748b;font-size:14px;line-height:1.6;">
+                <strong>${inviterName}</strong> invited you to collaborate on
+                <strong>${projectName}</strong> in workspace <strong>${workspaceName}</strong>.
+              </p>
+              <p style="margin:0 0 20px;color:#64748b;font-size:14px;line-height:1.6;">
+                Your account has been created. Use the credentials below to sign in.
+                The temporary password is valid for <strong>${expiresInHours} hours</strong>.
+              </p>
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:20px;">
+                <p style="margin:0 0 8px;color:#64748b;font-size:13px;"><strong>Email:</strong> ${emailAddress}</p>
+                <p style="margin:0;color:#64748b;font-size:13px;"><strong>Temporary password:</strong> <code style="color:#7C3AED;font-size:15px;">${tempPassword}</code></p>
+              </div>
+              <div style="text-align:center;margin:24px 0;">
+                <a href="${loginUrl}" style="display:inline-block;background:#7C3AED;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;font-size:15px;">
+                  Sign In to TASKPULSE
+                </a>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+async function sendProjectMemberAddedEmail({
+    to,
+    name,
+    projectName,
+    workspaceName,
+    inviterName,
+}) {
+    if (!transporter) {
+        throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
+    }
+
+    const loginUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/login`;
+
+    await transporter.sendMail({
+        from: `"TASKPULSE" <${EMAIL_USER}>`,
+        to,
+        subject: `You've been added to "${projectName}" on TASKPULSE`,
+        html: buildProjectMemberAddedHtml({ name, projectName, workspaceName, inviterName, loginUrl }),
+        text: `${inviterName} added you to ${projectName} in ${workspaceName}. Sign in at ${loginUrl}`,
+    });
+}
+
+async function sendProjectCollaboratorInviteEmail({
+    to,
+    name,
+    emailAddress,
+    tempPassword,
+    projectName,
+    workspaceName,
+    inviterName,
+    expiresInHours = 24,
+}) {
+    if (!transporter) {
+        throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in .env");
+    }
+
+    const loginUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/login`;
+
+    await transporter.sendMail({
+        from: `"TASKPULSE" <${EMAIL_USER}>`,
+        to,
+        subject: `You're invited to collaborate on "${projectName}"`,
+        html: buildProjectCollaboratorInviteHtml({
+            name,
+            emailAddress,
+            tempPassword,
+            projectName,
+            workspaceName,
+            inviterName,
+            loginUrl,
+            expiresInHours,
+        }),
+        text: `${inviterName} invited you to ${projectName}. Email: ${emailAddress}. Temporary password: ${tempPassword} (valid ${expiresInHours} hours). Sign in at ${loginUrl}`,
+    });
+}
+
 module.exports = {
     sendPasswordResetOtp,
     sendWelcomeUserEmail,
     sendWorkspaceInvitation,
+    sendProjectMemberAddedEmail,
+    sendProjectCollaboratorInviteEmail,
     OTP_EXPIRY_MINUTES,
 };

@@ -14,6 +14,14 @@ const {
 } = require("../services/authTokenService");
 const { sendPasswordResetOtp, OTP_EXPIRY_MINUTES, sendWelcomeUserEmail } = require("../services/emailService");
 const { validatePassword, generateTempPassword } = require("../utils/passwordPolicy");
+const {
+    needsPasswordChange,
+    isTemporaryPasswordExpired,
+    buildTempPasswordCreateData,
+    buildPasswordChangedData,
+    withClientPasswordFlags,
+} = require("../utils/userAccountHelper");
+const { markInvitationActiveAfterPasswordChange } = require("../services/projectInvitationService");
 
 const OTP_MAX_REQUESTS = 3; // max OTP emails per user per hour
 const OTP_WINDOW_MS = 60 * 60 * 1000;
@@ -39,6 +47,10 @@ const USER_SELECT = {
     role: true,
     isActive: true,
     mustResetPassword: true,
+    isTemporaryPassword: true,
+    accountStatus: true,
+    temporaryPasswordExpiresAt: true,
+    passwordChangedAt: true,
     profilePhoto: true,
     contactNumber: true,
     address: true,
@@ -108,16 +120,12 @@ const loginUser = async (req, res) => {
             return errorResponse(res, "Account deactivated", 403, "Your account has been deactivated. Contact an administrator.");
         }
 
-        if (
-            user.mustResetPassword
-            && user.tempPasswordExpiresAt
-            && new Date() > user.tempPasswordExpiresAt
-        ) {
+        if (isTemporaryPasswordExpired(user)) {
             return errorResponse(
                 res,
                 "Temporary password expired",
                 403,
-                "Your temporary password has expired. Contact your administrator to recreate your account."
+                "Your temporary password has expired. Contact your project manager to resend the invitation."
             );
         }
 
@@ -135,8 +143,8 @@ const loginUser = async (req, res) => {
         setAuthCookies(res, accessToken, refreshToken);
 
         return successResponse(res, "Login successful", {
-            user: safeUser,
-            mustResetPassword: user.mustResetPassword,
+            user: withClientPasswordFlags(safeUser),
+            mustResetPassword: needsPasswordChange(user),
         });
     } catch (error) {
         console.error(error);
@@ -208,7 +216,7 @@ const getSession = async (req, res) => {
                     select: USER_SELECT,
                 });
                 if (user?.isActive) {
-                    return successResponse(res, "Session active", user);
+                    return successResponse(res, "Session active", withClientPasswordFlags(user));
                 }
             } catch (error) {
                 if (error.name !== "TokenExpiredError") {
@@ -244,7 +252,7 @@ const getSession = async (req, res) => {
         const newRefreshToken = await rotateRefreshToken(refreshToken, record.userId);
         setAuthCookies(res, newAccessToken, newRefreshToken);
 
-        return successResponse(res, "Session restored", user);
+        return successResponse(res, "Session restored", withClientPasswordFlags(user));
     } catch (error) {
         console.error(error);
         clearAuthCookies(res);
@@ -263,7 +271,7 @@ const getProfile = async (req, res) => {
             return errorResponse(res, "User not found", 404);
         }
 
-        return successResponse(res, "Profile fetched", user);
+        return successResponse(res, "Profile fetched", withClientPasswordFlags(user));
     } catch (error) {
         console.error(error);
         return errorResponse(res, "Server Error", 500);
@@ -295,7 +303,7 @@ const updateProfile = async (req, res) => {
             select: USER_SELECT,
         });
 
-        return successResponse(res, "Profile updated successfully", user);
+        return successResponse(res, "Profile updated successfully", withClientPasswordFlags(user));
     } catch (error) {
         console.error(error);
         return errorResponse(res, "Server Error", 500);
@@ -459,8 +467,7 @@ const resetPassword = async (req, res) => {
         await prisma.user.update({
             where: { id: user.id },
             data: {
-                password: hashedPassword,
-                mustResetPassword: false,
+                ...buildPasswordChangedData(hashedPassword),
                 ...clearResetOtp,
             },
         });
@@ -477,7 +484,11 @@ const resetPassword = async (req, res) => {
 
 const forceResetPassword = async (req, res) => {
     try {
-        const { newPassword, confirmPassword } = req.body;
+        const { currentPassword, newPassword, confirmPassword } = req.body;
+
+        if (!currentPassword) {
+            return errorResponse(res, "Temporary password is required", 400);
+        }
 
         if (!newPassword || !confirmPassword) {
             return errorResponse(res, "New password and confirmation are required", 400);
@@ -497,23 +508,40 @@ const forceResetPassword = async (req, res) => {
             return errorResponse(res, "User not found", 404);
         }
 
-        if (!user.mustResetPassword) {
+        if (!needsPasswordChange(user)) {
             return errorResponse(res, "Password reset is not required for this account", 400);
+        }
+
+        if (isTemporaryPasswordExpired(user)) {
+            return errorResponse(
+                res,
+                "Temporary password expired",
+                403,
+                "Your temporary password has expired. Contact your project manager to resend the invitation."
+            );
+        }
+
+        const isCurrentValid = await bcrypt.compare(currentPassword, user.password);
+        if (!isCurrentValid) {
+            return errorResponse(res, "Temporary password is incorrect", 400);
+        }
+
+        const isSamePassword = await bcrypt.compare(newPassword, user.password);
+        if (isSamePassword) {
+            return errorResponse(res, "New password must be different from the temporary password", 400);
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         const updated = await prisma.user.update({
             where: { id: user.id },
-            data: {
-                password: hashedPassword,
-                mustResetPassword: false,
-                tempPasswordExpiresAt: null,
-            },
+            data: buildPasswordChangedData(hashedPassword),
             select: USER_SELECT,
         });
 
-        return successResponse(res, "Password updated successfully", updated);
+        await markInvitationActiveAfterPasswordChange(user.id);
+
+        return successResponse(res, "Password updated successfully", withClientPasswordFlags(updated));
     } catch (error) {
         console.error(error);
         return errorResponse(res, "Server Error", 500);
@@ -565,10 +593,8 @@ const bootstrapAdmin = async (req, res) => {
                 name: name.trim(),
                 email: normalizedEmail,
                 role: "ADMINISTRATOR",
-                password: hashedPassword,
-                mustResetPassword: true,
                 isActive: true,
-                tempPasswordExpiresAt: expiresAt,
+                ...buildTempPasswordCreateData(hashedPassword, expiresAt),
             },
             select: USER_SELECT,
         });
