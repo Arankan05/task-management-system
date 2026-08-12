@@ -13,11 +13,15 @@ jobs:
     steps:
       - name: Deploy to EC2 instance
         uses: appleboy/ssh-action@v1.0.3
+        timeout_minutes: 30
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 30m
           script: |
+            set -e
             cd task-management-system
-            git pull
+            git fetch origin main
+            git reset --hard origin/main
             sudo docker compose up -d --build
