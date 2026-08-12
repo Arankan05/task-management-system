@@ -13,11 +13,12 @@ jobs:
     steps:
       - name: Deploy to EC2 instance
         uses: appleboy/ssh-action@v1.0.3
-        timeout_minutes: 30
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          timeout: 120
           command_timeout: 30m
           script: |
             set -e
